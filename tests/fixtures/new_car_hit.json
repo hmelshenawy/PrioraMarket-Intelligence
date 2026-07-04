@@ -1,0 +1,31 @@
+{
+  "id": 7654321,
+  "uuid": "new-car-uuid-dddd-eeee-ffff",
+  "name": {"en": "Brand New Toyota Land Cruiser 2026"},
+  "price": 245000,
+  "year": 2026,
+  "kilometers": 0,
+  "details": {
+    "Body Type": {"en": {"value": "SUV"}},
+    "Fuel Type": {"en": {"value": "Petrol"}},
+    "Transmission Type": {"en": {"value": "Automatic"}},
+    "Exterior Color": {"en": {"value": "Black"}},
+    "Regional Specs": {"en": {"value": "GCC"}}
+  },
+  "category_v2": {
+    "slug_paths": [
+      "motors/new-cars/toyota",
+      "motors/new-cars/toyota/land-cruiser"
+    ]
+  },
+  "seller_type": "dealer",
+  "user": {"name": "Al Futtaim Motors New"},
+  "is_verified_user": true,
+  "seller_account_type": "AG",
+  "neighbourhood": {"en": "Festival City"},
+  "places": {"en": ["Dubai", "UAE"]},
+  "uri": "/motors/new-cars/toyota/land-cruiser/7654321/",
+  "added": "2026-07-01T08:00:00Z",
+  "photos_count": 25,
+  "motors_trim": {"name": "VXR"}
+}

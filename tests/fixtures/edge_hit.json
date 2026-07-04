@@ -1,0 +1,20 @@
+{
+  "id": 999,
+  "uuid": null,
+  "name": null,
+  "price": null,
+  "year": null,
+  "kilometers": null,
+  "details": {},
+  "category_v2": {"slug_paths": ["motors/used-cars/bmw"]},
+  "seller_type": null,
+  "user": {},
+  "is_verified_user": false,
+  "seller_account_type": null,
+  "neighbourhood": null,
+  "places": {},
+  "uri": "/motors/used-cars/bmw/999/",
+  "added": null,
+  "photos_count": 0,
+  "motors_trim": null
+}

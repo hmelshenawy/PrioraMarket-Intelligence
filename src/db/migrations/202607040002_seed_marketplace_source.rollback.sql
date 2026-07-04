@@ -1,0 +1,1 @@
+DELETE FROM marketplace_source WHERE code = 'dubizzle_uae';

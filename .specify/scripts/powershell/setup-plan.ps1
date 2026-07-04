@@ -20,7 +20,7 @@ if ($Help) {
 # Load common functions
 . "$PSScriptRoot/common.ps1"
 
-# Get all paths and variables from common functions
+# Get all paths and variables from src.common functions
 $paths = Get-FeaturePathsEnv
 
 # If feature.json pins an existing feature directory, branch naming is not required.

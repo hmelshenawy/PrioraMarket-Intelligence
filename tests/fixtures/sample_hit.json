@@ -1,0 +1,31 @@
+{
+  "id": 1234567,
+  "uuid": "sample-uuid-aaaa-bbbb-cccc",
+  "name": {"en": "Toyota Camry 2021 GLE"},
+  "price": 85000,
+  "year": 2021,
+  "kilometers": 45000,
+  "details": {
+    "Body Type": {"en": {"value": "Sedan"}},
+    "Fuel Type": {"en": {"value": "Petrol"}},
+    "Transmission Type": {"en": {"value": "Automatic"}},
+    "Exterior Color": {"en": {"value": "White"}},
+    "Regional Specs": {"en": {"value": "GCC Specs"}}
+  },
+  "category_v2": {
+    "slug_paths": [
+      "motors/used-cars/toyota",
+      "motors/used-cars/toyota/camry"
+    ]
+  },
+  "seller_type": "dealer",
+  "user": {"name": "Al Futtaim Motors"},
+  "is_verified_user": true,
+  "seller_account_type": "AG",
+  "neighbourhood": {"en": "Sheikh Zayed Road"},
+  "places": {"en": ["Dubai", "UAE"]},
+  "uri": "/motors/used-cars/toyota/camry/1234567/",
+  "added": "2026-06-15T10:00:00Z",
+  "photos_count": 12,
+  "motors_trim": {"name": "GLE"}
+}
