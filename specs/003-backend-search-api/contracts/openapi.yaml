@@ -1,0 +1,253 @@
+openapi: 3.0.3
+info:
+  title: PrioraMarket Intelligence Backend Search API
+  version: 1.0.0
+  description: Read-only API for searching and reading canonical vehicle listings.
+servers:
+  - url: /api/v1
+paths:
+  /health:
+    get:
+      summary: Health check
+      responses:
+        '200':
+          description: Service is reachable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /listings:
+    get:
+      summary: Search current listings
+      parameters:
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: condition
+          schema: { type: string, enum: [used, new] }
+        - in: query
+          name: make
+          schema: { type: string }
+        - in: query
+          name: model
+          schema: { type: string }
+        - in: query
+          name: yearFrom
+          schema: { type: integer }
+        - in: query
+          name: yearTo
+          schema: { type: integer }
+        - in: query
+          name: priceMin
+          schema: { type: number }
+        - in: query
+          name: priceMax
+          schema: { type: number }
+        - in: query
+          name: kmMin
+          schema: { type: integer }
+        - in: query
+          name: kmMax
+          schema: { type: integer }
+        - in: query
+          name: location
+          schema: { type: string }
+        - in: query
+          name: sellerType
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1, minimum: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, minimum: 1, maximum: 100 }
+        - in: query
+          name: sort
+          schema:
+            type: string
+            default: newest
+            enum: [relevance, newest, price_asc, price_desc, year_asc, year_desc, km_asc, km_desc]
+      responses:
+        '200':
+          description: Paginated listing results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchListingsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+  /listings/filters:
+    get:
+      summary: Get available listing filters
+      responses:
+        '200':
+          description: Current filter metadata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FilterMetadataResponse'
+  /listings/{id}:
+    get:
+      summary: Get listing detail
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Listing detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListingDetailResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /stats:
+    get:
+      summary: Get high-level inventory stats
+      responses:
+        '200':
+          description: Inventory stats
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryStatsResponse'
+components:
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiErrorResponse'
+  schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+    SearchListingsResponse:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ListingSearchResult'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+    ListingSearchResult:
+      type: object
+      required: [id, externalId, title, make, model, trim, year, priceAed, km, condition, location, sellerType, url, photosCount, firstSeenAt, lastSeenAt]
+      properties:
+        id: { type: string }
+        externalId: { type: string, nullable: true }
+        title: { type: string, nullable: true }
+        make: { type: string, nullable: true }
+        model: { type: string, nullable: true }
+        trim: { type: string, nullable: true }
+        year: { type: integer, nullable: true }
+        priceAed: { type: number, nullable: true }
+        km: { type: integer, nullable: true }
+        condition: { type: string, nullable: true }
+        location: { type: string, nullable: true }
+        sellerType: { type: string, nullable: true }
+        url: { type: string, nullable: true }
+        photosCount: { type: integer, nullable: true }
+        firstSeenAt: { type: string, format: date-time, nullable: true }
+        lastSeenAt: { type: string, format: date-time, nullable: true }
+    PaginationMeta:
+      type: object
+      required: [page, limit, total, totalPages]
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        totalPages: { type: integer }
+    ListingDetailResponse:
+      allOf:
+        - $ref: '#/components/schemas/ListingSearchResult'
+        - type: object
+          required: [marketplace, bodyType, fuel, transmission, color, specs, seller, isVerified, isAgent, neighbourhood, firstSeenRunId, lastSeenRunId, canonicalHash]
+          properties:
+            marketplace: { type: string, nullable: true }
+            bodyType: { type: string, nullable: true }
+            fuel: { type: string, nullable: true }
+            transmission: { type: string, nullable: true }
+            color: { type: string, nullable: true }
+            specs:
+              type: object
+              nullable: true
+              additionalProperties: true
+            seller: { type: string, nullable: true }
+            isVerified: { type: boolean, nullable: true }
+            isAgent: { type: boolean, nullable: true }
+            neighbourhood: { type: string, nullable: true }
+            firstSeenRunId: { type: string, nullable: true }
+            lastSeenRunId: { type: string, nullable: true }
+            canonicalHash: { type: string, nullable: true }
+    FilterMetadataResponse:
+      type: object
+      required: [makes, models, price, year, km, conditions, sellerTypes]
+      properties:
+        makes:
+          type: array
+          items: { type: string }
+        models:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        price:
+          $ref: '#/components/schemas/NumericRange'
+        year:
+          $ref: '#/components/schemas/NumericRange'
+        km:
+          $ref: '#/components/schemas/NumericRange'
+        conditions:
+          type: array
+          items: { type: string }
+        sellerTypes:
+          type: array
+          items: { type: string }
+    NumericRange:
+      type: object
+      required: [min, max]
+      properties:
+        min: { type: number, nullable: true }
+        max: { type: number, nullable: true }
+    InventoryStatsResponse:
+      type: object
+      required: [totalListings, usedListings, newListings, totalMakes, totalModels, averagePriceAed, minPriceAed, maxPriceAed, lastUpdatedAt]
+      properties:
+        totalListings: { type: integer }
+        usedListings: { type: integer }
+        newListings: { type: integer }
+        totalMakes: { type: integer }
+        totalModels: { type: integer }
+        averagePriceAed: { type: number, nullable: true }
+        minPriceAed: { type: number, nullable: true }
+        maxPriceAed: { type: number, nullable: true }
+        lastUpdatedAt: { type: string, format: date-time, nullable: true }
+    ApiErrorResponse:
+      type: object
+      required: [statusCode, error, message]
+      properties:
+        statusCode: { type: integer }
+        error: { type: string }
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items: { type: string }
+        requestId: { type: string, nullable: true }

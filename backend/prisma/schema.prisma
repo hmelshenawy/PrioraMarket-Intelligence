@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model MarketplaceSource {
+  id        BigInt   @id @default(autoincrement())
+  code      String   @unique
+  name      String
+  country   String
+  baseUrl   String   @map("base_url")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("marketplace_source")
+}
+
+model IngestionRun {
+  id                  BigInt    @id @default(autoincrement())
+  name                String    @unique
+  marketplaceSourceId BigInt    @map("marketplace_source_id")
+  marketplace         String
+  condition           String
+  make                String
+  status              String
+  startedAt           DateTime  @map("started_at") @db.Timestamptz(6)
+  completedAt         DateTime? @map("completed_at") @db.Timestamptz(6)
+  pagesScraped        Int       @default(0) @map("pages_scraped")
+  listingsExtracted   Int       @default(0) @map("listings_extracted")
+  listingsSkipped     Int       @default(0) @map("listings_skipped")
+  failuresCount       Int       @default(0) @map("failures_count")
+  durationMs          Int?      @map("duration_ms")
+  configSnapshot      Json      @default("{}") @map("config_snapshot")
+  reportJson          Json?     @map("report_json")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("ingestion_run")
+}
+
+model RawListing {
+  id                          BigInt   @id @default(autoincrement())
+  marketplaceSourceId         BigInt   @map("marketplace_source_id")
+  ingestionRunId              BigInt   @map("ingestion_run_id")
+  source                      String
+  uuid                        String
+  rawPayload                  Json     @map("raw_payload")
+  rawHash                     String   @map("raw_hash")
+  adapterVersion              String   @map("adapter_version")
+  marketplaceSchemaVersion    String?  @map("marketplace_schema_version")
+  marketplacePayloadVersion   String?  @map("marketplace_payload_version")
+  extractedAt                 DateTime @map("extracted_at") @db.Timestamptz(6)
+  createdAt                   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("raw_listing")
+}
+
+model Listing {
+  id                  BigInt   @id @default(autoincrement())
+  marketplaceSourceId BigInt   @map("marketplace_source_id")
+  source              String
+  uuid                String
+  title               String?
+  make                String?
+  model               String?
+  trim                String?
+  year                Int?
+  price               Decimal? @db.Decimal(14, 2)
+  mileage             Int?
+  condition           String?
+  location            String?
+  sellerType          String?  @map("seller_type")
+  url                 String?
+  status              String   @default("ACTIVE")
+  firstSeenAt         DateTime @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt          DateTime @map("last_seen_at") @db.Timestamptz(6)
+  firstSeenRunId      BigInt   @map("first_seen_run_id")
+  lastSeenRunId       BigInt   @map("last_seen_run_id")
+  currentRawListingId BigInt?  @map("current_raw_listing_id")
+  canonicalHash       String   @map("canonical_hash")
+  normalizationVersion String  @map("normalization_version")
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([source, uuid])
+  @@map("listing")
+}
+
+model ListingSnapshot {
+  id               BigInt   @id @default(autoincrement())
+  listingId        BigInt   @map("listing_id")
+  ingestionRunId   BigInt   @map("ingestion_run_id")
+  rawListingId     BigInt?  @map("raw_listing_id")
+  snapshotHash     String   @map("snapshot_hash")
+  canonicalPayload Json     @map("canonical_payload")
+  changedFields    Json     @default("[]") @map("changed_fields")
+  capturedAt       DateTime @map("captured_at") @db.Timestamptz(6)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("listing_snapshot")
+}

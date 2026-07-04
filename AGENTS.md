@@ -1,7 +1,7 @@
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/001-data-ingestion-foundation/plan.md
-(Feature 001 — Data Ingestion Foundation. Related artifacts in the same
-directory: spec.md, research.md, data-model.md, quickstart.md, contracts/.)
+specs/003-backend-search-api/plan.md
+(Feature 003 — Backend Search API. Related artifacts in the same directory:
+spec.md, research.md, data-model.md, quickstart.md, contracts/.)
 <!-- SPECKIT END -->
