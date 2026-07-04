@@ -26,6 +26,11 @@ export interface ListingSearchCriteria {
   sort: ListingSort;
 }
 
+export interface BuiltListingSearchMeta {
+  sortType: ListingSort;
+  freeTextUsed: boolean;
+}
+
 export interface BuiltListingSearchQuery {
   where: Record<string, unknown>;
   orderBy: Record<string, unknown> | Array<Record<string, unknown>>;
@@ -35,6 +40,7 @@ export interface BuiltListingSearchQuery {
   include?: Record<string, unknown>;
   requiresRawRead?: boolean;
   parameters?: unknown[];
+  meta: BuiltListingSearchMeta;
 }
 
 export interface BuiltListingDetailQuery {

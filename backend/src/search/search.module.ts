@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaModule } from '../db/prisma.module';
 import { FILTER_METADATA_CACHE } from './cache/filter-metadata-cache.token';
 import { InMemoryFilterMetadataCache } from './cache/in-memory-filter-metadata.cache';
 import { PrismaListingReadRepository } from './listing-read.repository';
@@ -13,6 +14,7 @@ import { StatsController } from './stats.controller';
 import { StatsService } from './stats.service';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [SearchController, StatsController],
   providers: [
     SearchService,

@@ -31,31 +31,37 @@ export class SearchListingsQueryDto {
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   @Type(() => Number)
   yearFrom?: number;
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   @Type(() => Number)
   yearTo?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   @Type(() => Number)
   priceMin?: number;
 
   @IsOptional()
   @IsNumber()
+  @Min(0)
   @Type(() => Number)
   priceMax?: number;
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   @Type(() => Number)
   kmMin?: number;
 
   @IsOptional()
   @IsInt()
+  @Min(0)
   @Type(() => Number)
   kmMax?: number;
 

@@ -88,22 +88,22 @@
 
 ### Tests for User Story 1
 
-- [ ] T049 [P] [US1] Create contract tests for GET /api/v1/listings response and validation behavior in backend/test/contract/listings-search.contract.spec.ts
-- [ ] T050 [P] [US1] Create SearchService unit tests for pagination defaults, relevance fallback, invalid sort, invalid condition, invalid numeric filters, limit max behavior, and ListingReadRepositoryInterface injection through LISTING_READ_REPOSITORY in backend/test/unit/search.service.spec.ts
-- [ ] T051 [P] [US1] Create SearchQueryBuilder unit tests for BuiltListingSearchQuery where, orderBy, select/include, skip, take, free-text, and relevance descriptors in backend/test/unit/search-query.builder.spec.ts
-- [ ] T052 [P] [US1] Create golden fixture tests for listing search response mapper and null/empty consistency in backend/test/unit/golden/listing-search-response.mapper.golden.spec.ts
-- [ ] T053 [P] [US1] Create read repository integration tests for search reads, filters, sorting, projection execution, counts, and no writes in backend/test/integration/listing-read.repository.search.spec.ts
+- [X] T049 [P] [US1] Create contract tests for GET /api/v1/listings response and validation behavior in backend/test/contract/listings-search.contract.spec.ts
+- [X] T050 [P] [US1] Create SearchService unit tests for pagination defaults, relevance fallback, invalid sort, invalid condition, invalid numeric filters, limit max behavior, and ListingReadRepositoryInterface injection through LISTING_READ_REPOSITORY in backend/test/unit/search.service.spec.ts
+- [X] T051 [P] [US1] Create SearchQueryBuilder unit tests for BuiltListingSearchQuery where, orderBy, select/include, skip, take, free-text, and relevance descriptors in backend/test/unit/search-query.builder.spec.ts
+- [X] T052 [P] [US1] Create golden fixture tests for listing search response mapper and null/empty consistency in backend/test/unit/golden/listing-search-response.mapper.golden.spec.ts
+- [X] T053 [P] [US1] Create read repository integration tests for search reads, filters, sorting, projection execution, counts, and no writes in backend/test/integration/listing-read.repository.search.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T054 [US1] Implement SearchListingsQueryDto validation transforms for empty filters, numeric filters, page, limit, condition, and sort in backend/src/search/dto/search-listings-query.dto.ts
-- [ ] T055 [US1] Implement SearchQueryBuilder search query construction returning BuiltListingSearchQuery for filters, free-text, relevance, sorting, pagination, and projection descriptors in backend/src/search/search-query.builder.ts
-- [ ] T056 [US1] Implement PrismaListingReadRepository search(query: BuiltListingSearchQuery) execution and database-to-domain mapping in backend/src/search/listing-read.repository.ts
-- [ ] T057 [US1] Implement ListingResponseMapper for search result DTOs and pagination metadata in backend/src/search/mappers/listing-response.mapper.ts
-- [ ] T058 [US1] Implement SearchService search orchestration using SEARCH_QUERY_BUILDER, LISTING_READ_REPOSITORY, and mapper abstractions in backend/src/search/search.service.ts
-- [ ] T059 [US1] Implement GET /api/v1/listings in SearchController in backend/src/search/search.controller.ts
-- [ ] T060 [US1] Add structured search logging metadata for duration, rowsReturned, sortType, cacheHit false, and freeTextUsed in backend/src/common/logging/request-logging.interceptor.ts
-- [ ] T061 [US1] Add additive search index migration plan file for condition, make, model, year, price, mileage, seller_type, location, last_seen_at, first_seen_at, composites, and text search in backend/prisma/migrations/README-search-indexes.md
+- [X] T054 [US1] Implement SearchListingsQueryDto validation transforms for empty filters, numeric filters, page, limit, condition, and sort in backend/src/search/dto/search-listings-query.dto.ts
+- [X] T055 [US1] Implement SearchQueryBuilder search query construction returning BuiltListingSearchQuery for filters, free-text, relevance, sorting, pagination, and projection descriptors in backend/src/search/search-query.builder.ts
+- [X] T056 [US1] Implement PrismaListingReadRepository search(query: BuiltListingSearchQuery) execution and database-to-domain mapping in backend/src/search/listing-read.repository.ts
+- [X] T057 [US1] Implement ListingResponseMapper for search result DTOs and pagination metadata in backend/src/search/mappers/listing-response.mapper.ts
+- [X] T058 [US1] Implement SearchService search orchestration using SEARCH_QUERY_BUILDER, LISTING_READ_REPOSITORY, and mapper abstractions in backend/src/search/search.service.ts
+- [X] T059 [US1] Implement GET /api/v1/listings in SearchController in backend/src/search/search.controller.ts
+- [X] T060 [US1] Add structured search logging metadata for duration, rowsReturned, sortType, cacheHit false, and freeTextUsed in backend/src/common/logging/request-logging.interceptor.ts
+- [X] T061 [US1] Add additive search index migration plan file for condition, make, model, year, price, mileage, seller_type, location, last_seen_at, first_seen_at, composites, and text search in backend/prisma/migrations/README-search-indexes.md
 
 **Checkpoint**: User Story 1 is independently functional and testable as the MVP.
 
@@ -117,18 +117,18 @@
 
 ### Tests for User Story 2
 
-- [ ] T062 [P] [US2] Create contract tests for GET /api/v1/listings/{id} success and 404 responses in backend/test/contract/listing-detail.contract.spec.ts
-- [ ] T063 [P] [US2] Create SearchService detail unit tests for ListingReadRepositoryInterface abstraction usage, mapper usage, and not-found behavior in backend/test/unit/search-detail.service.spec.ts
-- [ ] T064 [P] [US2] Create golden fixture tests for listing detail response mapper with canonical, optional, lineage, null, and empty values in backend/test/unit/golden/listing-detail-response.mapper.golden.spec.ts
-- [ ] T065 [P] [US2] Create read repository integration tests for detail reads, marketplace joins, latest snapshot mapping, raw fallback mapping, and no writes in backend/test/integration/listing-read.repository.detail.spec.ts
+- [X] T062 [P] [US2] Create contract tests for GET /api/v1/listings/{id} success and 404 responses in backend/test/contract/listing-detail.contract.spec.ts
+- [X] T063 [P] [US2] Create SearchService detail unit tests for ListingReadRepositoryInterface abstraction usage, mapper usage, and not-found behavior in backend/test/unit/search-detail.service.spec.ts
+- [X] T064 [P] [US2] Create golden fixture tests for listing detail response mapper with canonical, optional, lineage, null, and empty values in backend/test/unit/golden/listing-detail-response.mapper.golden.spec.ts
+- [X] T065 [P] [US2] Create read repository integration tests for detail reads, marketplace joins, latest snapshot mapping, raw fallback mapping, and no writes in backend/test/integration/listing-read.repository.detail.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T066 [US2] Extend SearchQueryBuilder with detail query descriptors returning BuiltListingDetailQuery and projections in backend/src/search/search-query.builder.ts
-- [ ] T067 [US2] Implement PrismaListingReadRepository findDetail(query: BuiltListingDetailQuery) with marketplace join, latest snapshot fallback, raw fallback, and domain mapping in backend/src/search/listing-read.repository.ts
-- [ ] T068 [US2] Implement ListingResponseMapper detail mapping in backend/src/search/mappers/listing-response.mapper.ts
-- [ ] T069 [US2] Implement SearchService detail orchestration and NotFoundError handling through abstractions in backend/src/search/search.service.ts
-- [ ] T070 [US2] Implement GET /api/v1/listings/:id in SearchController in backend/src/search/search.controller.ts
+- [X] T066 [US2] Extend SearchQueryBuilder with detail query descriptors returning BuiltListingDetailQuery and projections in backend/src/search/search-query.builder.ts
+- [X] T067 [US2] Implement PrismaListingReadRepository findDetail(query: BuiltListingDetailQuery) with marketplace join, latest snapshot fallback, raw fallback, and domain mapping in backend/src/search/listing-read.repository.ts
+- [X] T068 [US2] Implement ListingResponseMapper detail mapping in backend/src/search/mappers/listing-response.mapper.ts
+- [X] T069 [US2] Implement SearchService detail orchestration and NotFoundError handling through abstractions in backend/src/search/search.service.ts
+- [X] T070 [US2] Implement GET /api/v1/listings/:id in SearchController in backend/src/search/search.controller.ts
 
 **Checkpoint**: User Story 2 is independently functional and does not break User Story 1.
 
@@ -142,21 +142,21 @@
 
 ### Tests for User Story 3
 
-- [ ] T071 [P] [US3] Create contract tests for GET /api/v1/listings/filters response shape in backend/test/contract/filter-metadata.contract.spec.ts
-- [ ] T072 [P] [US3] Create SearchService filter metadata cache unit tests for IFilterMetadataCache usage, cache miss, cache hit, TTL expiry, and cacheHit logging metadata in backend/test/unit/filter-metadata-cache.service.spec.ts
-- [ ] T073 [P] [US3] Create golden fixture tests for filter metadata response mapper with sorted arrays, grouped models, null ranges, and empty inventory shape in backend/test/unit/golden/filter-metadata-response.mapper.golden.spec.ts
-- [ ] T074 [P] [US3] Create read repository integration tests for distinct values, ranges, grouped models, aggregate reads, and no writes in backend/test/integration/listing-read.repository.filters.spec.ts
-- [ ] T075 [P] [US3] Create in-memory filter metadata cache unit tests for TTL, get, set, clear, and read-only behavior in backend/test/unit/in-memory-filter-metadata.cache.spec.ts
+- [X] T071 [P] [US3] Create contract tests for GET /api/v1/listings/filters response shape in backend/test/contract/filter-metadata.contract.spec.ts
+- [X] T072 [P] [US3] Create SearchService filter metadata cache unit tests for IFilterMetadataCache usage, cache miss, cache hit, TTL expiry, and cacheHit logging metadata in backend/test/unit/filter-metadata-cache.service.spec.ts
+- [X] T073 [P] [US3] Create golden fixture tests for filter metadata response mapper with sorted arrays, grouped models, null ranges, and empty inventory shape in backend/test/unit/golden/filter-metadata-response.mapper.golden.spec.ts
+- [X] T074 [P] [US3] Create read repository integration tests for distinct values, ranges, grouped models, aggregate reads, and no writes in backend/test/integration/listing-read.repository.filters.spec.ts
+- [X] T075 [P] [US3] Create in-memory filter metadata cache unit tests for TTL, get, set, clear, and read-only behavior in backend/test/unit/in-memory-filter-metadata.cache.spec.ts
 
 ### Implementation for User Story 3
 
-- [ ] T076 [US3] Extend SearchQueryBuilder with filter metadata query descriptors returning BuiltFilterMetadataQuery and projections in backend/src/search/search-query.builder.ts
-- [ ] T077 [US3] Implement PrismaListingReadRepository getFilterMetadata(query: BuiltFilterMetadataQuery) aggregate reads and domain mapping in backend/src/search/listing-read.repository.ts
-- [ ] T078 [US3] Implement FilterMetadataResponseMapper in backend/src/search/mappers/filter-metadata-response.mapper.ts
-- [ ] T079 [US3] Implement in-process TTL cache using FILTER_METADATA_CACHE_TTL_SECONDS without listing or ingestion table writes in backend/src/search/cache/in-memory-filter-metadata.cache.ts
-- [ ] T080 [US3] Implement SearchService filter metadata orchestration through IFilterMetadataCache, SEARCH_QUERY_BUILDER, and LISTING_READ_REPOSITORY in backend/src/search/search.service.ts
-- [ ] T081 [US3] Implement GET /api/v1/listings/filters in SearchController in backend/src/search/search.controller.ts
-- [ ] T082 [US3] Add filter metadata cacheHit logging support in backend/src/common/logging/request-logging.interceptor.ts
+- [X] T076 [US3] Extend SearchQueryBuilder with filter metadata query descriptors returning BuiltFilterMetadataQuery and projections in backend/src/search/search-query.builder.ts
+- [X] T077 [US3] Implement PrismaListingReadRepository getFilterMetadata(query: BuiltFilterMetadataQuery) aggregate reads and domain mapping in backend/src/search/listing-read.repository.ts
+- [X] T078 [US3] Implement FilterMetadataResponseMapper in backend/src/search/mappers/filter-metadata-response.mapper.ts
+- [X] T079 [US3] Implement in-process TTL cache using FILTER_METADATA_CACHE_TTL_SECONDS without listing or ingestion table writes in backend/src/search/cache/in-memory-filter-metadata.cache.ts
+- [X] T080 [US3] Implement SearchService filter metadata orchestration through IFilterMetadataCache, SEARCH_QUERY_BUILDER, and LISTING_READ_REPOSITORY in backend/src/search/search.service.ts
+- [X] T081 [US3] Implement GET /api/v1/listings/filters in SearchController in backend/src/search/search.controller.ts
+- [X] T082 [US3] Add filter metadata cacheHit logging support in backend/src/common/logging/request-logging.interceptor.ts
 
 **Checkpoint**: User Story 3 is independently functional and cached metadata meets the contract.
 
@@ -170,13 +170,13 @@
 
 ### Tests for User Story 4
 
-- [ ] T083 [P] [US4] Create contract tests for GET /api/v1/health response shape and status code in backend/test/contract/health.contract.spec.ts
-- [ ] T084 [P] [US4] Create HealthController unit tests for status ok response in backend/test/unit/health.controller.spec.ts
+- [X] T083 [P] [US4] Create contract tests for GET /api/v1/health response shape and status code in backend/test/contract/health.contract.spec.ts
+- [X] T084 [P] [US4] Create HealthController unit tests for status ok response in backend/test/unit/health.controller.spec.ts
 
 ### Implementation for User Story 4
 
-- [ ] T085 [US4] Implement HealthResponseDto with status ok contract in backend/src/health/dto/health-response.dto.ts
-- [ ] T086 [US4] Implement HealthController GET /api/v1/health without database dependency in backend/src/health/health.controller.ts
+- [X] T085 [US4] Implement HealthResponseDto with status ok contract in backend/src/health/dto/health-response.dto.ts
+- [X] T086 [US4] Implement HealthController GET /api/v1/health without database dependency in backend/src/health/health.controller.ts
 
 **Checkpoint**: User Story 4 is independently functional and fast.
 
@@ -190,19 +190,19 @@
 
 ### Tests for User Story 5
 
-- [ ] T087 [P] [US5] Create contract tests for GET /api/v1/stats response shape in backend/test/contract/inventory-stats.contract.spec.ts
-- [ ] T088 [P] [US5] Create StatsService unit tests for LISTING_READ_REPOSITORY token injection, mapper usage, empty inventory behavior, and optional cache compatibility in backend/test/unit/stats.service.spec.ts
-- [ ] T089 [P] [US5] Create golden fixture tests for inventory stats response mapper with count, price summary, lastUpdatedAt, null, and empty fields in backend/test/unit/golden/inventory-stats-response.mapper.golden.spec.ts
-- [ ] T090 [P] [US5] Create read repository integration tests for stats aggregate reads and no writes in backend/test/integration/listing-read.repository.stats.spec.ts
+- [X] T087 [P] [US5] Create contract tests for GET /api/v1/stats response shape in backend/test/contract/inventory-stats.contract.spec.ts
+- [X] T088 [P] [US5] Create StatsService unit tests for LISTING_READ_REPOSITORY token injection, mapper usage, empty inventory behavior, and optional cache compatibility in backend/test/unit/stats.service.spec.ts
+- [X] T089 [P] [US5] Create golden fixture tests for inventory stats response mapper with count, price summary, lastUpdatedAt, null, and empty fields in backend/test/unit/golden/inventory-stats-response.mapper.golden.spec.ts
+- [X] T090 [P] [US5] Create read repository integration tests for stats aggregate reads and no writes in backend/test/integration/listing-read.repository.stats.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T091 [US5] Extend SearchQueryBuilder with inventory stats aggregate query descriptors returning BuiltInventoryStatsQuery and projections in backend/src/search/search-query.builder.ts
-- [ ] T092 [US5] Implement PrismaListingReadRepository getInventoryStats(query: BuiltInventoryStatsQuery) aggregate reads and domain mapping in backend/src/search/listing-read.repository.ts
-- [ ] T093 [US5] Implement InventoryStatsResponseMapper in backend/src/search/mappers/inventory-stats-response.mapper.ts
-- [ ] T094 [US5] Implement StatsService orchestration through LISTING_READ_REPOSITORY and mapper abstractions in backend/src/search/stats.service.ts
-- [ ] T095 [US5] Implement GET /api/v1/stats in StatsController inside SearchModule in backend/src/search/stats.controller.ts
-- [ ] T096 [US5] Register StatsController and StatsService providers inside SearchModule without creating a StatsModule in backend/src/search/search.module.ts
+- [X] T091 [US5] Extend SearchQueryBuilder with inventory stats aggregate query descriptors returning BuiltInventoryStatsQuery and projections in backend/src/search/search-query.builder.ts
+- [X] T092 [US5] Implement PrismaListingReadRepository getInventoryStats(query: BuiltInventoryStatsQuery) aggregate reads and domain mapping in backend/src/search/listing-read.repository.ts
+- [X] T093 [US5] Implement InventoryStatsResponseMapper in backend/src/search/mappers/inventory-stats-response.mapper.ts
+- [X] T094 [US5] Implement StatsService orchestration through LISTING_READ_REPOSITORY and mapper abstractions in backend/src/search/stats.service.ts
+- [X] T095 [US5] Implement GET /api/v1/stats in StatsController inside SearchModule in backend/src/search/stats.controller.ts
+- [X] T096 [US5] Register StatsController and StatsService providers inside SearchModule without creating a StatsModule in backend/src/search/search.module.ts
 
 **Checkpoint**: User Story 5 is independently functional and remains inside SearchModule.
 
@@ -212,15 +212,15 @@
 
 **Purpose**: Validation, performance, documentation, and cross-story hardening.
 
-- [ ] T097 [P] Add OpenAPI contract verification helper using specs/003-backend-search-api/contracts/openapi.yaml in backend/test/contract/openapi-contract.spec.ts
-- [ ] T098 [P] Add read-only safety integration test comparing listing and ingestion row counts before and after API calls in backend/test/integration/read-only-safety.spec.ts
-- [ ] T099 [P] Add performance smoke tests for search, detail, cached filters, and health targets in backend/test/integration/performance-smoke.spec.ts
-- [ ] T100 [P] Add query plan notes for expected indexes and relevance search in backend/docs/search-query-optimization.md
-- [ ] T101 [P] Update backend README with setup, DATABASE_URL, PORT, NODE_ENV, LOG_LEVEL, FILTER_METADATA_CACHE_TTL_SECONDS, validation commands, and quickstart checks in backend/README.md
-- [ ] T102 Run npm install validation for backend/package.json and backend/package-lock.json
-- [ ] T103 Run npm run build and resolve build errors in backend/src
-- [ ] T104 Run npm run test and resolve test failures in backend/test
-- [ ] T105 Verify quickstart smoke checks from specs/003-backend-search-api/quickstart.md against the running backend
+- [X] T097 [P] Add OpenAPI contract verification helper using specs/003-backend-search-api/contracts/openapi.yaml in backend/test/contract/openapi-contract.spec.ts
+- [X] T098 [P] Add read-only safety integration test comparing listing and ingestion row counts before and after API calls in backend/test/integration/read-only-safety.spec.ts
+- [X] T099 [P] Add performance smoke tests for search, detail, cached filters, and health targets in backend/test/integration/performance-smoke.spec.ts
+- [X] T100 [P] Add query plan notes for expected indexes and relevance search in backend/docs/search-query-optimization.md
+- [X] T101 [P] Update backend README with setup, DATABASE_URL, PORT, NODE_ENV, LOG_LEVEL, FILTER_METADATA_CACHE_TTL_SECONDS, validation commands, and quickstart checks in backend/README.md
+- [X] T102 Run npm install validation for backend/package.json and backend/package-lock.json
+- [X] T103 Run npm run build and resolve build errors in backend/src
+- [X] T104 Run npm run test and resolve test failures in backend/test
+- [X] T105 Verify quickstart smoke checks from specs/003-backend-search-api/quickstart.md against the running backend
 
 ---
 
