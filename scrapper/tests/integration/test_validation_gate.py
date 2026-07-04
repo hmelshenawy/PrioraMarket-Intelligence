@@ -16,13 +16,13 @@ from datetime import datetime, timezone
 import pytest
 from conftest import load_fixture
 
-from src.common.models import Scope
 from config.config import Config
+from src.common.models import Scope
 from src.ingestion.canonicalizer import Canonicalizer
 from src.ingestion.normalizer import Normalizer
 from src.ingestion.pipeline import IngestionPipeline
-from marketplaces.adapter_interface import PageMetadata
-from marketplaces.dubizzle.extractor import extract
+from src.marketplaces.adapter_interface import PageMetadata
+from src.marketplaces.dubizzle.extractor import extract
 from src.storage.csv_storage import CsvStorageAdapter
 
 

@@ -15,7 +15,7 @@ from conftest import load_fixture
 
 from src.common.models import Scope
 from src.ingestion.normalizer import Normalizer
-from marketplaces.dubizzle.extractor import extract
+from src.marketplaces.dubizzle.extractor import extract
 
 
 def _prototype_extract(hit: dict) -> dict:

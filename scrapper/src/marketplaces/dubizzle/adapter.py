@@ -17,10 +17,10 @@ from typing import Any, Iterator, Optional
 
 import requests
 
-from src.marketplaces.adapter_interface import PageMetadata
 from src.common.logger import get_logger
 from src.common.models import RawListing, Scope
 from src.config.config import Config
+from src.marketplaces.adapter_interface import PageMetadata
 from src.marketplaces.dubizzle.extractor import extract
 
 # Attribute list preserved exactly from the prototype for parity (SC-001).

@@ -221,7 +221,7 @@ def test_SC_008_storage_substitutability(config, tmp_path):
 
 def test_SC_009_second_marketplace_isolated(config):
     """SC-009: a second marketplace only needs a new adapter — no orchestration rewrite."""
-    from marketplaces.adapter_interface import MarketplaceAdapter
+    from src.marketplaces.adapter_interface import MarketplaceAdapter
 
     class _SecondMarketplaceAdapter:
         marketplace_name = "examplemotors"

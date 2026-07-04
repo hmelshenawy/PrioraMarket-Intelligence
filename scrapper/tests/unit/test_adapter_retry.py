@@ -12,7 +12,7 @@ import requests
 from conftest import load_fixture
 
 from src.common.models import Scope
-from marketplaces.dubizzle.adapter import DubizzleAdapter
+from src.marketplaces.dubizzle.adapter import DubizzleAdapter
 
 
 class _Resp:

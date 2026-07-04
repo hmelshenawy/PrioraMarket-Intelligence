@@ -14,9 +14,9 @@ import pytest
 from conftest import load_fixture
 
 from src.common.models import RawListing, Scope
-from marketplaces.adapter_interface import MarketplaceAdapter, PageMetadata
-from marketplaces.dubizzle.adapter import DubizzleAdapter
-from marketplaces.dubizzle.extractor import extract
+from src.marketplaces.adapter_interface import MarketplaceAdapter, PageMetadata
+from src.marketplaces.dubizzle.adapter import DubizzleAdapter
+from src.marketplaces.dubizzle.extractor import extract
 
 
 class _StubResponse:
