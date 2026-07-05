@@ -14,14 +14,14 @@ export interface ListingImageProps {
 export function ListingImage({ title, photosCount, className }: ListingImageProps) {
   return (
     <div
-      className={cn(
-        "relative flex aspect-video items-center justify-center overflow-hidden rounded-t-card bg-surface",
-        className,
-      )}
+      // className={cn(
+      //   "relative flex aspect-video items-center justify-center overflow-hidden rounded-t-card bg-surface",
+      //   className,
+      // )}
     >
-      <div className="flex flex-col items-center gap-1 text-muted" aria-hidden>
+      {/* <div className="flex flex-col items-center gap-1 text-muted" aria-hidden>
         <ImageIcon className="h-8 w-8" />
-      </div>
+      </div> */}
       <span className="sr-only">No photo available for {title}</span>
       {photosCount != null && photosCount > 0 && (
         <Badge variant="neutral" className="absolute right-2 top-2">

@@ -49,6 +49,10 @@ describe('PrismaListingReadRepository search', () => {
           model: 'Camry',
           trim: 'SE',
           year: 2022,
+          // Catalog display names are null when the fixture row omits them
+          // (committed mapper behavior from feature 004/005).
+          makeDisplay: null,
+          modelDisplay: null,
           priceAed: 85000,
           km: 45000,
           condition: 'used',

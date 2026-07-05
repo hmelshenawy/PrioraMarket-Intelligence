@@ -75,37 +75,37 @@
 
 > Write tests first; ensure they fail before implementation.
 
-- [ ] T021 [P] [US1] Contract test for `GET /api/v1/market/snapshot` (overall, no filters) in `backend/test/contract/market-snapshot.contract.spec.ts` (assert scope.level=overall, scope.label="Overall UAE Used Cars", metric order, `freshness.lastUpdated/datasetVersion/scrapeRunId` present, raw values only, generatedAt present)
-- [ ] T022 [P] [US1] Unit test for SnapshotAggregationService pure aggregation in `backend/test/unit/market-snapshot.aggregator.spec.ts` (active listings count, median, P25/P75 vs min/max fallback by sample size, sample-size inclusion, unsupported-by-default for new/removed/net/priceDrops)
-- [ ] T023 [P] [US1] Golden dataset test for overall snapshot aggregation in `backend/test/unit/golden/market-snapshot.golden.spec.ts` (fixed canonical listing fixture → expected snapshot JSON across supported/unsupported/empty scopes, including freshness derived from fixture listing timestamps)
-- [ ] T024 [P] [US1] Frontend unit test for market formatting helpers in `frontend/test/unit/marketFormat.test.ts` (AED labels, thousand separators, percentages, "As of" timestamp rendering from raw ISO)
-- [ ] T025 [P] [US1] Frontend component test for SnapshotMetrics card order and unsupported states in `frontend/test/component/snapshotMetrics.test.tsx`
+- [X] T021 [P] [US1] Contract test for `GET /api/v1/market/snapshot` (overall, no filters) in `backend/test/contract/market-snapshot.contract.spec.ts` (assert scope.level=overall, scope.label="Overall UAE Used Cars", metric order, `freshness.lastUpdated/datasetVersion/scrapeRunId` present, raw values only, generatedAt present)
+- [X] T022 [P] [US1] Unit test for SnapshotAggregationService pure aggregation in `backend/test/unit/market-snapshot.aggregator.spec.ts` (active listings count, median, P25/P75 vs min/max fallback by sample size, sample-size inclusion, unsupported-by-default for new/removed/net/priceDrops)
+- [X] T023 [P] [US1] Golden dataset test for overall snapshot aggregation in `backend/test/unit/golden/market-snapshot.golden.spec.ts` (fixed canonical listing fixture → expected snapshot JSON across supported/unsupported/empty scopes, including freshness derived from fixture listing timestamps)
+- [X] T024 [P] [US1] Frontend unit test for market formatting helpers in `frontend/test/unit/marketFormat.test.ts` (AED labels, thousand separators, percentages, "As of" timestamp rendering from raw ISO)
+- [X] T025 [P] [US1] Frontend component test for SnapshotMetrics card order and unsupported states in `frontend/test/component/snapshotMetrics.test.tsx`
 
 ### Backend Implementation for User Story 1
 
-- [ ] T026 [US1] Implement SnapshotReadRepository in `backend/src/analytics/snapshot-read.repository.ts` (Prisma read-only queries over `listing` where status='ACTIVE' scoped by canonical make/model/trim/year; countActiveListings, fetchPricesForStats, getFreshness from max(lastSeenAt)/lastSeenRunId/normalizationVersion over the scoped active listings; no writes)
-- [ ] T027 [US1] Implement SnapshotAggregationService in `backend/src/analytics/aggregation/market-snapshot.aggregator.ts` (activeListings count; medianPrice with sampleSize; typicalPriceRange with P25/P75 when sample sufficient else min/max fallback, sampleSize, method="typical-range"; inventoryChange activeInventory real + newListings/removedListings/netChange null with unsupported status by default; priceDrops null with unsupported status; produce MetricSupportStatus per metric; pure, no DB access)
-- [ ] T028 [US1] Implement MarketSnapshotService in `backend/src/analytics/market-snapshot.service.ts` (orchestrate: build AppliedMarketFilters from query DTO, call repository, call aggregator, build MarketScope label="Overall UAE Used Cars" for overall, populate `freshness` from repository getFreshness, set generatedAt, delegate to mapper; no business calculations)
-- [ ] T029 [US1] Implement MarketSnapshotController in `backend/src/analytics/market-snapshot.controller.ts` (`GET /api/v1/market/snapshot`; validate query DTO; return DTO; no business logic)
-- [ ] T030 [US1] Wire SnapshotReadRepository provider into `backend/src/analytics/analytics.module.ts` and register MarketSnapshotController/MarketSnapshotService
-- [ ] T031 [US1] Finalize MarketSnapshotResponseMapper in `backend/src/analytics/mappers/market-snapshot-response.mapper.ts` (map domain snapshot to response DTO including `freshness` and ordered metrics; raw values only)
-- [ ] T032 [US1] Add integration test for MarketSnapshotService + SnapshotReadRepository in `backend/test/integration/market-snapshot.service.spec.ts` (overall scope end-to-end against a seeded Prisma test DB; assert freshness populated from seeded listing timestamps)
+- [X] T026 [US1] Implement SnapshotReadRepository in `backend/src/analytics/snapshot-read.repository.ts` (Prisma read-only queries over `listing` where status='ACTIVE' scoped by canonical make/model/trim/year; countActiveListings, fetchPricesForStats, getFreshness from max(lastSeenAt)/lastSeenRunId/normalizationVersion over the scoped active listings; no writes)
+- [X] T027 [US1] Implement SnapshotAggregationService in `backend/src/analytics/aggregation/market-snapshot.aggregator.ts` (activeListings count; medianPrice with sampleSize; typicalPriceRange with P25/P75 when sample sufficient else min/max fallback, sampleSize, method="typical-range"; inventoryChange activeInventory real + newListings/removedListings/netChange null with unsupported status by default; priceDrops null with unsupported status; produce MetricSupportStatus per metric; pure, no DB access)
+- [X] T028 [US1] Implement MarketSnapshotService in `backend/src/analytics/market-snapshot.service.ts` (orchestrate: build AppliedMarketFilters from query DTO, call repository, call aggregator, build MarketScope label="Overall UAE Used Cars" for overall, populate `freshness` from repository getFreshness, set generatedAt, delegate to mapper; no business calculations)
+- [X] T029 [US1] Implement MarketSnapshotController in `backend/src/analytics/market-snapshot.controller.ts` (`GET /api/v1/market/snapshot`; validate query DTO; return DTO; no business logic)
+- [X] T030 [US1] Wire SnapshotReadRepository provider into `backend/src/analytics/analytics.module.ts` and register MarketSnapshotController/MarketSnapshotService
+- [X] T031 [US1] Finalize MarketSnapshotResponseMapper in `backend/src/analytics/mappers/market-snapshot-response.mapper.ts` (map domain snapshot to response DTO including `freshness` and ordered metrics; raw values only)
+- [X] T032 [US1] Add integration test for MarketSnapshotService + SnapshotReadRepository in `backend/test/integration/market-snapshot.service.spec.ts` (overall scope end-to-end against a seeded Prisma test DB; assert freshness populated from seeded listing timestamps)
 
 ### Frontend Implementation for User Story 1
 
-- [ ] T033 [P] [US1] Create market API client in `frontend/features/market/api/market-api.client.ts` (axios GET snapshot + filter-options; raw response passthrough)
-- [ ] T034 [P] [US1] Create zod schemas in `frontend/features/market/schemas/market-snapshot.schema.ts` and `frontend/features/market/schemas/filter-options.schema.ts` (validate backend response shapes including `freshness`)
-- [ ] T035 [P] [US1] Create market types in `frontend/features/market/types/market.types.ts` (TypeScript types matching response DTOs including freshness)
-- [ ] T036 [P] [US1] Create market constants in `frontend/features/market/constants/market.ts` (metric order, period default 7, query keys)
-- [ ] T037 [P] [US1] Create market formatting utils in `frontend/features/market/utils/market-format.ts` (formatAed, formatNumber, formatPercent, formatAsOf; presentation only; MUST NOT present freshness as a real-time reading)
-- [ ] T038 [P] [US1] Create MetricState shared component in `frontend/features/market/components/MetricState.tsx` (loading, empty, unsupported, error states; distinguishes unsupported from true zero)
-- [ ] T039 [P] [US1] Create per-metric components in `frontend/features/market/components/ActiveListingsCard.tsx`, `MedianPriceCard.tsx`, `TypicalPriceRangeCard.tsx`, `InventoryChangeCard.tsx`, `PriceDropsCard.tsx` (presentation only; render raw values via market-format; show sample sizes; show unsupported states via MetricState)
-- [ ] T040 [US1] Create SnapshotMetrics component in `frontend/features/market/components/SnapshotMetrics.tsx` (renders the five metric components in the required order)
-- [ ] T041 [US1] Create AsOfTimestamp and ScopeLabel components in `frontend/features/market/components/AsOfTimestamp.tsx` and `frontend/features/market/components/ScopeLabel.tsx`
-- [ ] T042 [US1] Create DashboardShell component in `frontend/features/market/components/DashboardShell.tsx` (page frame, header with ScopeLabel + AsOfTimestamp, SnapshotMetrics placement)
-- [ ] T043 [US1] Create useMarketSnapshot hook in `frontend/features/market/hooks/use-market-snapshot.ts` (TanStack Query; query key includes canonical filters + period; no client-side analytics)
-- [ ] T044 [US1] Create market dashboard page route in `frontend/app/market/page.tsx` (compose DashboardShell + useMarketSnapshot for the overall scope; dark-mode compatible)
-- [ ] T045 [US1] Create market snapshot mapper in `frontend/features/market/mappers/market-snapshot-mapper.ts` (raw response → view model for presentation; no recalculation; freshness carried as metadata, not displayed as real-time)
+- [X] T033 [P] [US1] Create market API client in `frontend/features/market/api/market-api.client.ts` (axios GET snapshot + filter-options; raw response passthrough)
+- [X] T034 [P] [US1] Create zod schemas in `frontend/features/market/schemas/market-snapshot.schema.ts` and `frontend/features/market/schemas/filter-options.schema.ts` (validate backend response shapes including `freshness`)
+- [X] T035 [P] [US1] Create market types in `frontend/features/market/types/market.types.ts` (TypeScript types matching response DTOs including freshness)
+- [X] T036 [P] [US1] Create market constants in `frontend/features/market/constants/market.ts` (metric order, period default 7, query keys)
+- [X] T037 [P] [US1] Create market formatting utils in `frontend/features/market/utils/market-format.ts` (formatAed, formatNumber, formatPercent, formatAsOf; presentation only; MUST NOT present freshness as a real-time reading)
+- [X] T038 [P] [US1] Create MetricState shared component in `frontend/features/market/components/MetricState.tsx` (loading, empty, unsupported, error states; distinguishes unsupported from true zero)
+- [X] T039 [P] [US1] Create per-metric components in `frontend/features/market/components/ActiveListingsCard.tsx`, `MedianPriceCard.tsx`, `TypicalPriceRangeCard.tsx`, `InventoryChangeCard.tsx`, `PriceDropsCard.tsx` (presentation only; render raw values via market-format; show sample sizes; show unsupported states via MetricState)
+- [X] T040 [US1] Create SnapshotMetrics component in `frontend/features/market/components/SnapshotMetrics.tsx` (renders the five metric components in the required order)
+- [X] T041 [US1] Create AsOfTimestamp and ScopeLabel components in `frontend/features/market/components/AsOfTimestamp.tsx` and `frontend/features/market/components/ScopeLabel.tsx`
+- [X] T042 [US1] Create DashboardShell component in `frontend/features/market/components/DashboardShell.tsx` (page frame, header with ScopeLabel + AsOfTimestamp, SnapshotMetrics placement)
+- [X] T043 [US1] Create useMarketSnapshot hook in `frontend/features/market/hooks/use-market-snapshot.ts` (TanStack Query; query key includes canonical filters + period; no client-side analytics)
+- [X] T044 [US1] Create market dashboard page route in `frontend/app/market/page.tsx` (compose DashboardShell + useMarketSnapshot for the overall scope; dark-mode compatible)
+- [X] T045 [US1] Create market snapshot mapper in `frontend/features/market/mappers/market-snapshot-mapper.ts` (raw response → view model for presentation; no recalculation; freshness carried as metadata, not displayed as real-time)
 
 **Checkpoint**: User Story 1 fully functional and independently testable. Overall dashboard loads with five ordered cards, "As of" timestamp, freshness metadata, and unsupported states for history-dependent metrics.
 
@@ -119,28 +119,28 @@
 
 ### Tests for User Story 2
 
-- [ ] T046 [P] [US2] Contract test for `GET /api/v1/market/snapshot` with make/model/trim/year in `backend/test/contract/market-snapshot.contract.spec.ts` (extend: filtered scope, canonical filters echoed, hierarchy validation errors, freshness present)
-- [ ] T047 [P] [US2] Contract test for `GET /api/v1/market/filter-options` cascading in `backend/test/contract/filter-options.contract.spec.ts` (options constrained by higher-level filters; filters echoed; `freshness` present)
-- [ ] T048 [P] [US2] Frontend integration test for cascading filters + no-reload refresh in `frontend/test/integration/marketFilters.test.tsx` (filter change updates snapshot via TanStack Query; lower-level cleared on higher-level change; no full reload)
+- [X] T046 [P] [US2] Contract test for `GET /api/v1/market/snapshot` with make/model/trim/year in `backend/test/contract/market-snapshot.contract.spec.ts` (extend: filtered scope, canonical filters echoed, hierarchy validation errors, freshness present)
+- [X] T047 [P] [US2] Contract test for `GET /api/v1/market/filter-options` cascading in `backend/test/contract/filter-options.contract.spec.ts` (options constrained by higher-level filters; filters echoed; `freshness` present)
+- [X] T048 [P] [US2] Frontend integration test for cascading filters + no-reload refresh in `frontend/test/integration/marketFilters.test.tsx` (filter change updates snapshot via TanStack Query; lower-level cleared on higher-level change; no full reload)
 
 ### Backend Implementation for User Story 2
 
-- [ ] T049 [US2] Extend SnapshotReadRepository in `backend/src/analytics/snapshot-read.repository.ts` to scope all reads (including getFreshness) by canonical make/model/trim/year from AppliedMarketFilters (no normalization; exact canonical match)
-- [ ] T050 [US2] Extend SnapshotAggregationService in `backend/src/analytics/aggregation/market-snapshot.aggregator.ts` to accept the selected scope and produce scope-relative metrics (reuse US1 calculation paths)
-- [ ] T051 [US2] Extend MarketSnapshotService scope-label generation in `backend/src/analytics/market-snapshot.service.ts` (build level + canonical scope label from canonical values; canonical fallback for labels in US2 — catalog display names added in US3)
-- [ ] T052 [US2] Implement FilterReadRepository in `backend/src/analytics/filter-read.repository.ts` (Prisma distinct canonical make/model/trim/year where status='ACTIVE' scoped by higher-level filters; activeListingCount per option; getFreshness over scoped active listings; displayName = canonical fallback in US2)
-- [ ] T053 [US2] Implement FilterOptionsService in `backend/src/analytics/filter-options.service.ts` (orchestrate repository by FilterOptionsQuery DTO; build options per level; populate `freshness` from repository getFreshness; set generatedAt; delegate to mapper)
-- [ ] T054 [US2] Implement FilterOptionsController in `backend/src/analytics/filter-options.controller.ts` (`GET /api/v1/market/filter-options`; validate query DTO; return DTO; no business logic)
-- [ ] T055 [US2] Wire FilterReadRepository + FilterOptionsService + FilterOptionsController into `backend/src/analytics/analytics.module.ts`
-- [ ] T056 [US2] Finalize FilterOptionsResponseMapper in `backend/src/analytics/mappers/filter-options-response.mapper.ts` (include `freshness`)
-- [ ] T057 [US2] Add integration test for FilterReadRepository cascading in `backend/test/integration/filter-read.repository.spec.ts` (model options limited to selected make; trim limited to make+model; counts match active listings; freshness scoped correctly)
+- [X] T049 [US2] Extend SnapshotReadRepository in `backend/src/analytics/snapshot-read.repository.ts` to scope all reads (including getFreshness) by canonical make/model/trim/year from AppliedMarketFilters (no normalization; exact canonical match)
+- [X] T050 [US2] Extend SnapshotAggregationService in `backend/src/analytics/aggregation/market-snapshot.aggregator.ts` to accept the selected scope and produce scope-relative metrics (reuse US1 calculation paths)
+- [X] T051 [US2] Extend MarketSnapshotService scope-label generation in `backend/src/analytics/market-snapshot.service.ts` (build level + canonical scope label from canonical values; canonical fallback for labels in US2 — catalog display names added in US3)
+- [X] T052 [US2] Implement FilterReadRepository in `backend/src/analytics/filter-read.repository.ts` (Prisma distinct canonical make/model/trim/year where status='ACTIVE' scoped by higher-level filters; activeListingCount per option; getFreshness over scoped active listings; displayName = canonical fallback in US2)
+- [X] T053 [US2] Implement FilterOptionsService in `backend/src/analytics/filter-options.service.ts` (orchestrate repository by FilterOptionsQuery DTO; build options per level; populate `freshness` from repository getFreshness; set generatedAt; delegate to mapper)
+- [X] T054 [US2] Implement FilterOptionsController in `backend/src/analytics/filter-options.controller.ts` (`GET /api/v1/market/filter-options`; validate query DTO; return DTO; no business logic)
+- [X] T055 [US2] Wire FilterReadRepository + FilterOptionsService + FilterOptionsController into `backend/src/analytics/analytics.module.ts`
+- [X] T056 [US2] Finalize FilterOptionsResponseMapper in `backend/src/analytics/mappers/filter-options-response.mapper.ts` (include `freshness`)
+- [X] T057 [US2] Add integration test for FilterReadRepository cascading in `backend/test/integration/filter-read.repository.spec.ts` (model options limited to selected make; trim limited to make+model; counts match active listings; freshness scoped correctly)
 
 ### Frontend Implementation for User Story 2
 
-- [ ] T058 [US2] Create useFilterOptions hook in `frontend/features/market/hooks/use-filter-options.ts` (TanStack Query; query key includes selected higher-level filters; parallel with snapshot query)
-- [ ] T059 [US2] Create MarketFilterBar component in `frontend/features/market/components/MarketFilterBar.tsx` (cascading make/model/trim/year selects; options from useFilterOptions; clear/disable invalid lower-level selections on higher-level change; display active listing counts as "Toyota (4,381)")
-- [ ] T060 [US2] Add URL query-param state for filters in `frontend/features/market/hooks/use-market-snapshot.ts` and `frontend/app/market/page.tsx` (filters in URL; TanStack Query re-fetches on key change; no full page reload)
-- [ ] T061 [US2] Compose MarketFilterBar into DashboardShell in `frontend/features/market/components/DashboardShell.tsx` and wire filter state to useMarketSnapshot query keys
+- [X] T058 [US2] Create useFilterOptions hook in `frontend/features/market/hooks/use-filter-options.ts` (TanStack Query; query key includes selected higher-level filters; parallel with snapshot query)
+- [X] T059 [US2] Create MarketFilterBar component in `frontend/features/market/components/MarketFilterBar.tsx` (cascading make/model/trim/year selects; options from useFilterOptions; clear/disable invalid lower-level selections on higher-level change; display active listing counts as "Toyota (4,381)")
+- [X] T060 [US2] Add URL query-param state for filters in `frontend/features/market/hooks/use-market-snapshot.ts` and `frontend/app/market/page.tsx` (filters in URL; TanStack Query re-fetches on key change; no full page reload)
+- [X] T061 [US2] Compose MarketFilterBar into DashboardShell in `frontend/features/market/components/DashboardShell.tsx` and wire filter state to useMarketSnapshot query keys
 
 **Checkpoint**: User Stories 1 AND 2 both work independently. Filtered dashboard updates for make/model/trim/year without a full page reload; cascading options constrain correctly; invalid lower-level selections are cleared/disabled.
 
@@ -154,19 +154,19 @@
 
 ### Tests for User Story 3
 
-- [ ] T062 [P] [US3] Integration test for catalog display-name resolution in `backend/test/integration/filter-read.repository.spec.ts` (extend: options carry catalog displayName when available; canonical fallback when absent)
-- [ ] T063 [P] [US3] Frontend component test for display-name rendering in `frontend/test/component/marketFilterBar.test.tsx` (options render displayName; counts shown; no hardcoded names)
+- [X] T062 [P] [US3] Integration test for catalog display-name resolution in `backend/test/integration/filter-read.repository.spec.ts` (extend: options carry catalog displayName when available; canonical fallback when absent)
+- [X] T063 [P] [US3] Frontend component test for display-name rendering in `frontend/test/component/marketFilterBar.test.tsx` (options render displayName; counts shown; no hardcoded names)
 
 ### Backend Implementation for User Story 3
 
-- [ ] T064 [US3] Extend FilterReadRepository to join `vehicle_reference_catalog` in `backend/src/analytics/filter-read.repository.ts` (resolve displayName per make/model/trim from catalog; canonical fallback when no catalog row; no new normalization)
-- [ ] T065 [US3] Add display-name resolution for scope label in `backend/src/analytics/market-snapshot.service.ts` (build scope label from catalog display names when available, canonical fallback otherwise; e.g., "Toyota Corolla XLI 2023")
-- [ ] T066 [US3] Add golden dataset test for catalog display-name fallback in `backend/test/unit/golden/filter-options.golden.spec.ts` (fixture with and without catalog display names → expected options + scope labels)
+- [X] T064 [US3] Extend FilterReadRepository to join `vehicle_reference_catalog` in `backend/src/analytics/filter-read.repository.ts` (resolve displayName per make/model/trim from catalog; canonical fallback when no catalog row; no new normalization)
+- [X] T065 [US3] Add display-name resolution for scope label in `backend/src/analytics/market-snapshot.service.ts` (build scope label from catalog display names when available, canonical fallback otherwise; e.g., "Toyota Corolla XLI 2023")
+- [X] T066 [US3] Add golden dataset test for catalog display-name fallback in `backend/test/unit/golden/filter-options.golden.spec.ts` (fixture with and without catalog display names → expected options + scope labels)
 
 ### Frontend Implementation for User Story 3
 
-- [ ] T067 [US3] Update MarketFilterBar to render `displayName` from API in `frontend/features/market/components/MarketFilterBar.tsx` (use API displayName; never hardcode vehicle names; keep counts)
-- [ ] T068 [US3] Update ScopeLabel to render API-provided scope label in `frontend/features/market/components/ScopeLabel.tsx` (no hardcoded names; no canonical-value transformation)
+- [X] T067 [US3] Update MarketFilterBar to render `displayName` from API in `frontend/features/market/components/MarketFilterBar.tsx` (use API displayName; never hardcode vehicle names; keep counts)
+- [X] T068 [US3] Update ScopeLabel to render API-provided scope label in `frontend/features/market/components/ScopeLabel.tsx` (no hardcoded names; no canonical-value transformation)
 
 **Checkpoint**: User Stories 1, 2, AND 3 work independently. Display names come from the Vehicle Reference Catalog with canonical fallback; no hardcoded names; no new normalization.
 
