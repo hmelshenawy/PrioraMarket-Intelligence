@@ -8,6 +8,7 @@ from src.common.canonical_hash import canonical_hash, canonical_payload
 from src.common.models import (
     Listing,
     ListingRow,
+    NormalizationStatisticsReport,
     PersistOutcome,
     RawListing,
     RunContext,
@@ -135,3 +136,6 @@ class PersistenceService:
 
     def load_raw_for_run(self, run_name_or_id: str):
         return self._storage.read_raw_for_run(run_name_or_id)
+
+    def write_normalization_statistics(self, report: NormalizationStatisticsReport) -> None:
+        self._storage.write_normalization_statistics(report)

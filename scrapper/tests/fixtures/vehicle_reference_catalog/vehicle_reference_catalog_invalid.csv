@@ -1,0 +1,4 @@
+market,make_key,make_display,model_key,model_display,generation,body_code,start_year,end_year,facelift_start_year,facelift_end_year,aliases,confidence
+global,,Mercedes-Benz,cclass,C-Class,W206,W206,2021,,,,'{"make":["Mercedes"],"model":["C Class"]}',manual
+global,volkswagen,Volkswagen,golf,Golf,Mk8,MK8,not-a-year,,,,'{"make":["VW"],"model":["Golf"]}',manual
+global,chevrolet,Chevrolet,tahoe,Tahoe,GM T1XX,T1XX,2021,,,,'not-json',manual

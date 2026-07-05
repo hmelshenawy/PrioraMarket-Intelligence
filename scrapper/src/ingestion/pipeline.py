@@ -56,7 +56,12 @@ class IngestionPipeline:
         self._adapter = adapter
         self._storage = storage
         self._normalizer = normalizer or Normalizer(config.normalization_version)
-        self._canonicalizer = canonicalizer or Canonicalizer()
+        self._canonicalizer = canonicalizer or Canonicalizer(
+            config.canonicalization_version,
+            storage=storage,
+            market="global",
+            operation="ingestion",
+        )
         # US3: default to the full validation gate; US1 tests pass a
         # MinimalValidator explicitly where happy-path behavior is needed.
         self._validator = validator or Validator()
@@ -139,6 +144,8 @@ class IngestionPipeline:
 
             report.state = RunState.CANONICALIZING
             if self._config.enable_canonicalization:
+                if hasattr(self._canonicalizer, "reset_statistics"):
+                    self._canonicalizer.reset_statistics()
                 canonicalized: list[Listing] = []
                 for listing in normalized:
                     try:
@@ -152,6 +159,8 @@ class IngestionPipeline:
                             extra={"uuid": listing.uuid, "error": str(exc)},
                         )
                 normalized = canonicalized
+                if hasattr(self._canonicalizer, "report"):
+                    self._storage.write_normalization_statistics(self._canonicalizer.report())
 
             report.state = RunState.VALIDATING
             for listing in normalized:

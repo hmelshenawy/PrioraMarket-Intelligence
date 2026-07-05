@@ -63,8 +63,8 @@ def test_replayer_uses_read_raw_no_marketplace(storage):
     # Sanity: no adapter is constructed; replayer only touches storage.
     listings = replayer.replay(dataset_version=None)
     assert len(listings) == 1
-    assert listings[0].make == "Toyota"
-    assert listings[0].fuel_type == "Petrol"  # canonicalized
+    assert listings[0].make == "toyota"
+    assert listings[0].fuel_type == "petrol"  # canonicalized
 
 
 def test_replayer_never_modifies_raw(storage):
@@ -103,6 +103,7 @@ def test_replayer_is_deterministic_across_runs(storage):
         "regional_spec",
         "body_type",
         "normalization_version",
+        "canonicalization_version",
     ):
         assert getattr(a, attr) == getattr(b, attr)
 
@@ -115,6 +116,17 @@ def test_replayer_applies_explicit_normalization_version(storage):
     )
     listings = replayer.replay(dataset_version=None)
     assert listings[0].normalization_version == "norm-explicit"
+
+
+def test_replayer_applies_explicit_canonicalization_version(storage):
+    replayer = Replayer(
+        storage=storage,
+        normalizer_version="norm-1",
+        canonicalization_version="canonical-explicit",
+        scope=Scope("dubizzle", "used", "toyota"),
+    )
+    listings = replayer.replay(dataset_version=None)
+    assert listings[0].canonicalization_version == "canonical-explicit"
 
 
 def test_replayer_validates_and_skips_invalid(storage):

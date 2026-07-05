@@ -69,6 +69,7 @@ class Config:
     db_pool_min: int = 1
     db_pool_max: int = 5
     db_connect_timeout: int = 10
+    canonicalization_version: str = "canonical-key-1"
 
     def snapshot(self) -> dict[str, Any]:
         """A non-secret snapshot for run metadata / dataset version."""
@@ -82,6 +83,7 @@ class Config:
             "rate_limit_max_seconds": self.rate_limit_max_seconds,
             "request_timeout_seconds": self.request_timeout_seconds,
             "normalization_version": self.normalization_version,
+            "canonicalization_version": self.canonicalization_version,
             "output_dir": str(self.output_dir),
             "storage_backend": self.storage_backend,
         }
@@ -155,6 +157,7 @@ def load_config(env_path: str | os.PathLike | None = None) -> Config:
         rate_limit_max_seconds=_get_float("RATE_LIMIT_MAX_SECONDS", 0.8),
         request_timeout_seconds=_get_float("REQUEST_TIMEOUT_SECONDS", 15.0),
         normalization_version=os.environ.get("NORMALIZATION_VERSION", "norm-1"),
+        canonicalization_version=os.environ.get("CANONICALIZATION_VERSION", "canonical-key-1"),
         enable_validation=_bool(os.environ.get("ENABLE_VALIDATION"), True),
         enable_canonicalization=_bool(os.environ.get("ENABLE_CANONICALIZATION"), True),
         enable_replay=_bool(os.environ.get("ENABLE_REPLAY"), True),

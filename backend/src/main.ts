@@ -20,6 +20,13 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalInterceptors(new RequestLoggingInterceptor());
 
+  app.enableCors({
+  origin: [
+    'http://localhost:3001',
+  ],
+  credentials: true,
+});
+
   await app.listen(config.get<number>('port', 3000));
 }
 

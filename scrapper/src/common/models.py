@@ -65,6 +65,8 @@ class Listing:
     marketplace_listing_id: Optional[str]
     make: Optional[str] = None
     model: Optional[str] = None
+    trim: Optional[str] = None
+    trim_source: str = "unknown"
     condition: Optional[str] = None
     price: Optional[float] = None
     currency: str = "AED"
@@ -75,11 +77,15 @@ class Listing:
     regional_spec: Optional[str] = None
     body_type: Optional[str] = None
     seller_type: Optional[str] = None
+    vehicle_condition: Optional[str] = None
+    specs: Optional[str] = None
+    color: Optional[str] = None
     location: Optional[str] = None
     photos_count: int = 0
     source_url: Optional[str] = None
     fetched_at: Optional[datetime] = None
     normalization_version: Optional[str] = None
+    canonicalization_version: Optional[str] = None
     dataset_version: Optional[str] = None
     lineage: dict[str, Any] = field(default_factory=dict)
 
@@ -87,10 +93,17 @@ class Listing:
         self,
         make: Optional[str] = None,
         model: Optional[str] = None,
+        trim: Optional[str] = None,
+        condition: Optional[str] = None,
         fuel_type: Optional[str] = None,
         transmission: Optional[str] = None,
         regional_spec: Optional[str] = None,
         body_type: Optional[str] = None,
+        seller_type: Optional[str] = None,
+        vehicle_condition: Optional[str] = None,
+        specs: Optional[str] = None,
+        color: Optional[str] = None,
+        canonicalization_version: Optional[str] = None,
     ) -> "Listing":
         """Return a copy with canonicalized business values (FR-043..045)."""
         import dataclasses
@@ -100,6 +113,10 @@ class Listing:
             replaced.make = make
         if model is not None:
             replaced.model = model
+        if trim is not None:
+            replaced.trim = trim
+        if condition is not None:
+            replaced.condition = condition
         if fuel_type is not None:
             replaced.fuel_type = fuel_type
         if transmission is not None:
@@ -108,6 +125,16 @@ class Listing:
             replaced.regional_spec = regional_spec
         if body_type is not None:
             replaced.body_type = body_type
+        if seller_type is not None:
+            replaced.seller_type = seller_type
+        if vehicle_condition is not None:
+            replaced.vehicle_condition = vehicle_condition
+        if specs is not None:
+            replaced.specs = specs
+        if color is not None:
+            replaced.color = color
+        if canonicalization_version is not None:
+            replaced.canonicalization_version = canonicalization_version
         return replaced
 
     def to_record(self) -> dict[str, Any]:
@@ -118,6 +145,8 @@ class Listing:
             "marketplace_listing_id": self.marketplace_listing_id,
             "make": self.make,
             "model": self.model,
+            "trim": self.trim,
+            "trim_source": self.trim_source,
             "condition": self.condition,
             "price": self.price,
             "currency": self.currency,
@@ -128,11 +157,15 @@ class Listing:
             "regional_spec": self.regional_spec,
             "body_type": self.body_type,
             "seller_type": self.seller_type,
+            "vehicle_condition": self.vehicle_condition,
+            "specs": self.specs,
+            "color": self.color,
             "location": self.location,
             "photos_count": self.photos_count,
             "source_url": self.source_url,
             "fetched_at": self.fetched_at.isoformat() if self.fetched_at else None,
             "normalization_version": self.normalization_version,
+            "canonicalization_version": self.canonicalization_version,
             "dataset_version": self.dataset_version,
         }
         rec.update(self.lineage)
@@ -317,6 +350,83 @@ class ListingRow:
     last_seen_run_id: int
     current_raw_listing_id: int | None = None
     status: str = "ACTIVE"
+
+
+@dataclass(frozen=True)
+class VehicleReferenceCatalogRow:
+    """Storage DTO for a Vehicle Reference Catalog row."""
+
+    id: int | None
+    market: str
+    make_key: str
+    make_display: str
+    model_key: str
+    model_display: str
+    generation: str | None = None
+    body_code: str | None = None
+    start_year: int | None = None
+    end_year: int | None = None
+    facelift_start_year: int | None = None
+    facelift_end_year: int | None = None
+    aliases: dict[str, Any] = field(default_factory=dict)
+    confidence: str = "manual"
+    source_file: str | None = None
+    source_row_hash: str | None = None
+    last_synced_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class NormalizationFieldStat:
+    """Operational normalization counts for one field in one context."""
+
+    market: str
+    field_name: str
+    raw_value: str | None
+    canonical_key: str | None
+    known: bool = False
+    alias_matched: bool = False
+    catalog_matched: bool = False
+    count: int = 1
+
+
+@dataclass
+class NormalizationStatisticsReport:
+    """Operational reporting envelope for normalization outcomes."""
+
+    operation: str
+    market: str
+    canonicalization_version: str
+    stats: list[NormalizationFieldStat] = field(default_factory=list)
+    created_at: datetime | None = None
+
+    @property
+    def unknown_count(self) -> int:
+        return sum(stat.count for stat in self.stats if not stat.known)
+
+
+@dataclass(frozen=True)
+class CatalogSyncReport:
+    """Summary emitted by Vehicle Reference Catalog synchronization."""
+
+    source_file: str
+    inserted: int = 0
+    updated: int = 0
+    unchanged: int = 0
+    rejected: int = 0
+    conflicts: int = 0
+    synced_at: datetime | None = None
+
+
+@dataclass(frozen=True)
+class BackfillListingCandidate:
+    """Minimal existing listing data needed for canonical backfill."""
+
+    id: int
+    source: str
+    uuid: str
+    canonical_payload: dict[str, Any]
+    normalization_version: str | None = None
+    current_raw_listing_id: int | None = None
 
 
 @dataclass

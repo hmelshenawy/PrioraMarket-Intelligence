@@ -4,6 +4,9 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
 from src.common.models import Listing, PersistOutcome, RawListing, RunReport, RunState, Scope
+from src.config.config import Config
+from src.ingestion.pipeline import IngestionPipeline
+from src.marketplaces.adapter_interface import PageMetadata
 from src.persistence.batch_bridge import PersistenceBatchBridge
 
 
@@ -57,6 +60,7 @@ class _FakeService:
         self.begun = []
         self.persisted = []
         self.finalized = []
+        self.normalization_statistics = []
 
     def begin_run(self, scope, config_snapshot, run_started_at, marketplace_source_code):
         self.begun.append((scope, config_snapshot, run_started_at, marketplace_source_code))
@@ -68,6 +72,59 @@ class _FakeService:
 
     def finalize_run(self, ctx, report):
         self.finalized.append((ctx, report))
+
+    def write_normalization_statistics(self, report):
+        self.normalization_statistics.append(report)
+
+
+class _PipelineAdapter:
+    retry_count = 0
+
+    def fetch(self, scope):
+        yield [
+            RawListing(
+                marketplace=scope.marketplace,
+                marketplace_listing_id="uuid-1",
+                uuid="uuid-1",
+                raw_payload={"id": "uuid-1", "make": "Mercedes-Benz"},
+                extracted_fields={
+                    "uuid": "uuid-1",
+                    "make": "Mercedes-Benz",
+                    "model": "C-Class",
+                    "price_aed": 100000,
+                    "fuel": "Gasoline",
+                    "trim": "AMG Line",
+                },
+                fetched_at=datetime(2026, 7, 4, tzinfo=timezone.utc),
+                scrape_run_id="run-1",
+                condition=scope.condition,
+                make_slug=scope.make,
+            )
+        ], PageMetadata(page=0, hits_on_page=1, nb_pages=1, nb_hits=1)
+
+
+def _config() -> Config:
+    return Config(
+        algolia_app_id="x",
+        algolia_api_key="x",
+        algolia_index="idx",
+        algolia_url="https://example.test",
+        hits_per_page=20,
+        max_pages=1,
+        output_dir=".",
+        retry_attempts=1,
+        retry_backoff=0,
+        rate_limit_min_seconds=0,
+        rate_limit_max_seconds=0,
+        request_timeout_seconds=1,
+        normalization_version="norm-1",
+        enable_validation=True,
+        enable_canonicalization=True,
+        enable_replay=True,
+        enable_structured_logging=False,
+        enable_csv_storage=True,
+        storage_backend="postgres",
+    )
 
 
 def test_bridge_pairs_raw_and_listing_by_source_uuid() -> None:
@@ -131,3 +188,25 @@ def test_bridge_calls_begin_and_finalize_once() -> None:
     assert service.begun[0][2] is started
     assert service.begun[0][3] == "dubizzle_uae"
     assert len(service.finalized) == 1
+
+
+def test_pipeline_emits_normalization_statistics_through_bridge() -> None:
+    service = _FakeService()
+    scope = Scope("dubizzle", "used", "mercedes-benz")
+    bridge = PersistenceBatchBridge(
+        service=service,
+        scope=scope,
+        config_snapshot={"storage_backend": "postgres"},
+        run_started_at=datetime(2026, 7, 4, tzinfo=timezone.utc),
+        marketplace_source_code="dubizzle_uae",
+    )
+    pipeline = IngestionPipeline(_config(), _PipelineAdapter(), bridge)
+
+    result = pipeline.run(scope, "run-1")
+
+    assert result.report.state.value == "COMPLETED"
+    assert len(service.normalization_statistics) == 1
+    report = service.normalization_statistics[0]
+    assert report.canonicalization_version == "canonical-key-1"
+    assert any(stat.field_name == "make" for stat in report.stats)
+    assert len(service.persisted) == 1

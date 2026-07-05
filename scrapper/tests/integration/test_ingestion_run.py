@@ -97,14 +97,15 @@ def test_scoped_run_produces_listings_raw_and_report(config):
     assert len(result.accepted) == 1
     listing = result.accepted[0]
     assert listing.uuid == "sample-uuid-aaaa-bbbb-cccc"
-    assert listing.make == "Toyota"
-    assert listing.model == "Camry"
+    assert listing.make == "toyota"
+    assert listing.model == "camry"
     assert listing.price == 85000.0
     assert listing.year == 2021
     assert listing.kilometers == 45000.0
-    assert listing.fuel_type == "Petrol"  # canonicalized
-    assert listing.regional_spec == "GCC"  # canonicalized
-    assert listing.body_type == "Sedan"
+    assert listing.fuel_type == "petrol"  # canonicalized
+    assert listing.regional_spec == "gcc"  # canonicalized
+    assert listing.body_type == "sedan"
+    assert listing.canonicalization_version == "canonical-key-1"
     assert listing.source_url.startswith("https://dubai.dubizzle.com")
     assert listing.normalization_version == "norm-1"
     assert listing.dataset_version is not None

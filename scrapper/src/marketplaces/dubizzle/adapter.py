@@ -27,7 +27,8 @@ from src.marketplaces.dubizzle.extractor import extract
 ATTRIBUTES_TO_RETRIEVE = (
     "id,uuid,name,price,year,kilometers,details,category_v2,seller_type,"
     "user,is_verified_user,seller_account_type,neighbourhood,places,uri,"
-    "added,photos_count,motors_trim"
+    "added,photos_count,motors_trim,url,permalink,absolute_url,canonical_url,"
+    "web_url,share_url"
 )
 
 

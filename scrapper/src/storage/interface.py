@@ -12,14 +12,18 @@ from datetime import datetime
 from typing import Iterable, Protocol, runtime_checkable
 
 from src.common.models import (
+    BackfillListingCandidate,
+    CatalogSyncReport,
     Listing,
     ListingRow,
     MarketplaceSourceRow,
+    NormalizationStatisticsReport,
     RawListing,
     RunContext,
     RunReport,
     RunRow,
     SnapshotRow,
+    VehicleReferenceCatalogRow,
 )
 
 
@@ -87,4 +91,32 @@ class StorageAdapter(Protocol):
         return None
 
     def rollback_listing_unit(self) -> None:
+        return None
+
+    def find_vehicle_reference_catalog(
+        self, market: str, make_key: str, model_key: str | None = None
+    ) -> list[VehicleReferenceCatalogRow]:
+        return []
+
+    def upsert_vehicle_reference_catalog(
+        self, rows: Iterable[VehicleReferenceCatalogRow], source_file: str
+    ) -> CatalogSyncReport:
+        return CatalogSyncReport(source_file=source_file)
+
+    def write_normalization_statistics(self, report: NormalizationStatisticsReport) -> None:
+        return None
+
+    def read_listing_backfill_candidates(
+        self, batch_size: int, after_id: int | None = None
+    ) -> Iterable[BackfillListingCandidate]:
+        return ()
+
+    def update_listing_backfill_payload(
+        self,
+        listing_id: int,
+        canonical_payload: dict,
+        canonical_hash: str,
+        normalization_version: str,
+        canonicalization_version: str,
+    ) -> None:
         return None

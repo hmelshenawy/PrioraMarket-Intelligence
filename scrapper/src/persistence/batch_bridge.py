@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Iterable, Iterator
 
-from src.common.models import Listing, RawListing, RunReport, Scope
+from src.common.models import Listing, NormalizationStatisticsReport, RawListing, RunReport, Scope
 
 PairKey = tuple[str, str]
 
@@ -73,6 +73,9 @@ class PersistenceBatchBridge:
             report.listings_skipped += unmatched_count
             report.failures += unmatched_count
         self._service.finalize_run(ctx, report)
+
+    def write_normalization_statistics(self, report: NormalizationStatisticsReport) -> None:
+        self._service.write_normalization_statistics(report)
 
     def read_raw(self, dataset_version: str | None = None) -> Iterator[RawListing]:
         yield from self._raw

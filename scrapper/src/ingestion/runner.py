@@ -56,6 +56,13 @@ def _create_postgres_bridge(config, scope: Scope, run_started_at: datetime):
     )
 
 
+def _create_postgres_storage(config):
+    from src.db.connection import DatabaseSettings, create_pool
+    from src.storage.postgres_storage import PostgresStorageAdapter
+
+    return PostgresStorageAdapter(create_pool(DatabaseSettings.from_config(config)))
+
+
 def _build_storage_adapter(config, scope: Scope, run_id: str, run_started_at: datetime):
     backend = config.storage_backend
     if backend == "csv":
@@ -126,11 +133,13 @@ def cmd_replay(args: argparse.Namespace) -> int:
             "dataset": args.dataset,
             "scope": scope.__dict__,
             "normalization_version": args.normalization_version,
+            "canonicalization_version": args.canonicalization_version,
         },
     )
     replayer = Replayer(
         storage=storage,
         normalizer_version=args.normalization_version,
+        canonicalization_version=args.canonicalization_version,
         scope=scope,
     )
     listings = replayer.replay(dataset_version=args.dataset)
@@ -138,9 +147,35 @@ def cmd_replay(args: argparse.Namespace) -> int:
         storage.write_listings(listings)
     print(
         f"Replay {run_id}: rebuilt {len(listings)} listings from {args.dataset} "
-        f"(normalization_version={args.normalization_version})"
+        f"(normalization_version={args.normalization_version}, "
+        f"canonicalization_version={args.canonicalization_version})"
     )
     return len(listings)
+
+
+def cmd_backfill(args: argparse.Namespace) -> int:
+    from src.maintenance.canonical_backfill import CanonicalBackfillService
+
+    config = load_config(args.env)
+    storage = _create_postgres_storage(config)
+    service = CanonicalBackfillService(
+        storage,
+        canonicalization_version=args.canonicalization_version,
+        market=args.market,
+        progress=print,
+    )
+    report = service.run(
+        dry_run=args.dry_run,
+        batch_size=args.batch_size,
+        resume_after_id=args.resume_after_id,
+    )
+    print(
+        "Canonical backfill summary: "
+        f"dry_run={report.dry_run}, scanned={report.scanned}, changed={report.changed}, "
+        f"updated={report.updated}, unchanged={report.unchanged}, skipped={report.skipped}, "
+        f"failures={report.failures}, last_processed_id={report.last_processed_id}"
+    )
+    return 1 if report.failures else 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -162,11 +197,37 @@ def build_parser() -> argparse.ArgumentParser:
         help="explicit normalization version to apply",
     )
     replay_p.add_argument(
+        "--canonicalization-version",
+        default="canonical-key-1",
+        help="explicit canonicalization version to apply",
+    )
+    replay_p.add_argument(
         "--make",
         default=None,
         help="make slug fallback (normally derived from stored raw data)",
     )
     replay_p.set_defaults(func=cmd_replay)
+
+    backfill_p = sub.add_parser(
+        "backfill",
+        help="canonicalize existing listing rows without marketplace access",
+    )
+    mode = backfill_p.add_mutually_exclusive_group(required=True)
+    mode.add_argument(
+        "--dry-run", action="store_true", help="report changes without updating listings"
+    )
+    mode.add_argument(
+        "--execute", action="store_true", help="apply listing canonical field updates"
+    )
+    backfill_p.add_argument("--batch-size", type=int, default=500)
+    backfill_p.add_argument("--resume-after-id", type=int, default=None)
+    backfill_p.add_argument("--market", default="global")
+    backfill_p.add_argument(
+        "--canonicalization-version",
+        default="canonical-key-1",
+        help="explicit canonicalization version to apply",
+    )
+    backfill_p.set_defaults(func=cmd_backfill)
     return parser
 
 

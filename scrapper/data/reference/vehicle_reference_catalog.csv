@@ -1,0 +1,7 @@
+market,make_key,make_display,model_key,model_display,generation,body_code,start_year,end_year,facelift_start_year,facelift_end_year,aliases,confidence
+global,mercedesbenz,Mercedes-Benz,cclass,C-Class,W206,W206,2021,,,,'{"make":["Mercedes","Mercedes Benz","Mercedes-Benz"],"model":["C Class","C-Class"]}',manual
+global,mercedesbenz,Mercedes-Benz,e53amg,E53 AMG,W213,W213,2018,2023,2021,2023,'{"make":["Mercedes","Mercedes Benz","Mercedes-Benz"],"model":["E53 AMG","E 53 AMG"]}',manual
+global,bmw,BMW,7series,7 Series,G70,G70,2022,,,,'{"make":["BMW"],"model":["7 Series","7-Series"]}',manual
+global,volkswagen,Volkswagen,golf,Golf,Mk8,MK8,2019,,,,'{"make":["VW","Volkswagen"],"model":["Golf"]}',manual
+global,chevrolet,Chevrolet,tahoe,Tahoe,GM T1XX,T1XX,2021,,,,'{"make":["Chevy","Chevrolet"],"model":["Tahoe"]}',manual
+global,landrover,Land Rover,rangerover,Range Rover,L460,L460,2022,,,,'{"make":["Land Rover","Land-Rover"],"model":["Range Rover","Range-Rover"]}',manual

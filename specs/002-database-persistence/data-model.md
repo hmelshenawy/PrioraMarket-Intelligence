@@ -4,7 +4,7 @@
 **Date**: 2026-07-04
 **Spec**: [spec.md](./spec.md) | **Plan**: [plan.md](./plan.md) | **Research**: [research.md](./research.md)
 
-This document defines the five persisted entities, their fields, types,
+This document defines the persisted entities, their fields, types,
 relationships, constraints, and validation rules. It is the Phase 1 design
 output. The schema is created by migrations (Phase 2) and accessed only
 through the `PostgresStorageAdapter` (Phase 3). `DatasetVersion`,
@@ -37,6 +37,8 @@ Listing ──(unique (source, uuid))──▶ deduplication key
     │ N                                │ current_raw_listing_id
     │                                  │
 ListingSnapshot (append-only, single canonical_payload)
+
+VehicleGenerationCatalog (reference/catalog, no listing relationship yet)
 ```
 
 - `MarketplaceSource` 1 — N `IngestionRun`
@@ -47,6 +49,8 @@ ListingSnapshot (append-only, single canonical_payload)
 - `Listing` 1 — N `ListingSnapshot` (append-only)
 - `RawListing` 1 — 0..1 `Listing` (via `listing.current_raw_listing_id`)
 - `IngestionRun` 1 — N `ListingSnapshot` (the run that triggered the change)
+- `VehicleGenerationCatalog` is standalone reference data for future vehicle
+  generation classification and is not linked to listings in this phase.
 
 ---
 
@@ -75,6 +79,50 @@ create it per run. Initial seed row:
 **Indexes**: unique on `code`.
 **Validation**: `code` non-empty slug; `name`, `country`, `base_url` non-empty.
 **State transitions**: none (reference data; upsert by `code`).
+
+---
+
+## 1a. VehicleGenerationCatalog
+
+Reference / catalog data for future market segmentation by market, canonical
+make/model keys, generation, and body code. It is owned by the Python migration stream and does
+not change ingestion, replay, backend APIs, frontend behavior, or current
+listing tables. Schema is migrated separately from CSV reference imports.
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `id` | `BIGSERIAL` | PK | Surrogate key. |
+| `slug` | `TEXT` | UNIQUE NOT NULL | Stable catalog identifier including market, e.g. `global-mercedes-benz-c-class-w205`. |
+| `market` | `TEXT` | NOT NULL DEFAULT `'global'` | Market release context such as `global`, `uae`, or `egypt`. |
+| `make_key` | `TEXT` | NOT NULL | Canonical make key from `src.normalization.catalog_normalizer`, e.g. `mercedesbenz`. |
+| `model_key` | `TEXT` | NOT NULL | Canonical model key from `src.normalization.catalog_normalizer`, e.g. `cclass`. |
+| `generation` | `TEXT` | NOT NULL | Generation label or code. |
+| `body_code` | `TEXT` | NULL | Manufacturer/internal body code when known. |
+| `marketing_name` | `TEXT` | NULL | Public generation name when known. |
+| `start_year` | `INTEGER` | NOT NULL | First model year in generation range. |
+| `end_year` | `INTEGER` | NULL | Final model year; null for current/open-ended ranges. |
+| `facelift_start_year` | `INTEGER` | NULL | First facelift model year when applicable. |
+| `facelift_end_year` | `INTEGER` | NULL | Final facelift model year when applicable. |
+| `aliases` | `JSONB` | NOT NULL DEFAULT `'[]'` | Alternate labels/body codes/search aliases. |
+| `confidence` | `TEXT` | NOT NULL DEFAULT `'manual'` | Provenance/confidence label for catalog curation. |
+| `created_at` | `TIMESTAMPTZ` | NOT NULL DEFAULT now() | |
+| `updated_at` | `TIMESTAMPTZ` | NOT NULL DEFAULT now() | |
+
+**Constraints**: unique on `slug`; unique on
+`(market, make_key, model_key, generation, body_code)`.
+**Indexes**: index on `(market, make_key, model_key)`; index on
+`(market, make_key, model_key, start_year, end_year)`.
+**Validation**: catalog rows should use non-empty `slug`, `make_key`, `model_key`,
+`generation`; `aliases` is a JSONB array. Listing classification and catalog
+backfills are explicitly deferred.
+**CSV imports**: reference files live under `scrapper/vehicle_catalog/` with
+one `.csv` per brand, such as `mercedes-benz.csv`, `bmw.csv`, and `toyota.csv`.
+Import with `python -m src.db.seed_vehicle_catalog --path vehicle_catalog` from
+the scraper project. CSV columns are `slug`, `market`, `make_key`, `model_key`,
+`generation`, `body_code`, `marketing_name`, `start_year`, `end_year`,
+`facelift_start_year`, `facelift_end_year`, `aliases`, and `confidence`.
+The importer parses `aliases` as a JSON array, treats empty optional year
+fields as null, and upserts rows by `slug`.
 
 ---
 
@@ -279,6 +327,8 @@ These invariants are enforced by integration tests (Phase 8).
 
 - `DatasetVersion`, `DatasetVersionRun`, `datasetKey` (FR-014, NFR-012).
 - `ReplayRun` (FR-036).
+- Vehicle generation classification/linkage from listings to
+  `vehicle_generation_catalog`.
 - Listing disappearance / lifecycle status (`SOLD`, `REMOVED_OR_EXPIRED`,
   `NOT_SEEN_IN_LATEST_RUN`) (NFR-011).
 - Search, analytics, AI, ML, auth, admin UI, public API (NFR-012).

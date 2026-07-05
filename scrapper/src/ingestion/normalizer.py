@@ -15,7 +15,7 @@ from src.common.models import Listing, RawListing, Scope
 
 # The normalizer ruleset version. Bump when mapping logic changes; replay
 # uses this to select which ruleset to apply.
-NORMALIZER_RULESET = "norm-ruleset-1"
+NORMALIZER_RULESET = "norm-ruleset-2"
 
 
 class Normalizer:
@@ -33,6 +33,8 @@ class Normalizer:
             marketplace_listing_id=raw.marketplace_listing_id,
             make=ef.get("make"),
             model=ef.get("model"),
+            trim=ef.get("trim"),
+            trim_source=ef.get("trim_source") or "unknown",
             condition=scope.condition,
             price=_to_float(ef.get("price_aed")),
             currency="AED",
@@ -43,6 +45,9 @@ class Normalizer:
             regional_spec=ef.get("specs"),
             body_type=ef.get("body_type"),
             seller_type=ef.get("seller_type"),
+            vehicle_condition=scope.condition,
+            specs=ef.get("specs"),
+            color=ef.get("color"),
             location=ef.get("location"),
             photos_count=int(ef.get("photos_count") or 0),
             source_url=ef.get("url"),
@@ -55,6 +60,7 @@ class Normalizer:
                 "condition": raw.condition,
                 "make_slug": raw.make_slug,
                 "trim": ef.get("trim"),
+                "trim_source": ef.get("trim_source") or "unknown",
                 "color": ef.get("color"),
                 "seller": ef.get("seller"),
                 "is_verified": ef.get("is_verified"),

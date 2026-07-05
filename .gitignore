@@ -28,6 +28,8 @@ htmlcov/
 
 # Node.js / TypeScript
 node_modules/
+.next/
+out/
 coverage/
 npm-debug.log*
 yarn-debug.log*
@@ -41,10 +43,14 @@ pnpm-debug.log*
 
 # Ingestion outputs (data artifacts, run reports, fixtures output)
 data/
+!scrapper/data/
+!scrapper/data/reference/
 output/
 outputs/
 *.csv
 !tests/fixtures/**/*.csv
+!scrapper/tests/fixtures/**/*.csv
+!scrapper/data/reference/**/*.csv
 run_reports/
 *.log
 

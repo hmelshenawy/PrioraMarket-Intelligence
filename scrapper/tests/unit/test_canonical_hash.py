@@ -43,3 +43,36 @@ def test_canonical_hash_changes_for_business_state_change() -> None:
     changed = {"uuid": "listing-1", "price": 11000, "make": "Toyota"}
 
     assert canonical_hash(base) != canonical_hash(changed)
+
+
+def test_canonical_hash_includes_categorical_fields_and_canonicalization_version() -> None:
+    base = Listing(
+        uuid="listing-1",
+        marketplace="dubizzle",
+        marketplace_listing_id="native-1",
+        make="mercedesbenz",
+        model="cclass",
+        fuel_type="petrol",
+        canonicalization_version="canonical-key-1",
+    )
+    changed_version = Listing(
+        uuid="listing-1",
+        marketplace="dubizzle",
+        marketplace_listing_id="native-1",
+        make="mercedesbenz",
+        model="cclass",
+        fuel_type="petrol",
+        canonicalization_version="canonical-key-2",
+    )
+    changed_field = Listing(
+        uuid="listing-1",
+        marketplace="dubizzle",
+        marketplace_listing_id="native-1",
+        make="mercedesbenz",
+        model="cclass",
+        fuel_type="diesel",
+        canonicalization_version="canonical-key-1",
+    )
+
+    assert canonical_hash(base) != canonical_hash(changed_version)
+    assert canonical_hash(base) != canonical_hash(changed_field)

@@ -4,6 +4,8 @@ export interface ListingDomain {
   title: string | null;
   make: string | null;
   model: string | null;
+  makeDisplay?: string | null;
+  modelDisplay?: string | null;
   trim: string | null;
   year: number | null;
   priceAed: number | null;

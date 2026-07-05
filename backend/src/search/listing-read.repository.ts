@@ -122,6 +122,8 @@ export class PrismaListingReadRepository implements ListingReadRepositoryInterfa
       title: row.title ?? null,
       make: row.make ?? null,
       model: row.model ?? null,
+      makeDisplay: row.makeDisplay ?? null,
+      modelDisplay: row.modelDisplay ?? null,
       trim: row.trim ?? null,
       year: row.year ?? null,
       priceAed: row.price === null || row.price === undefined ? null : Number(row.price),
@@ -205,6 +207,8 @@ interface ListingRow {
   title?: string | null;
   make?: string | null;
   model?: string | null;
+  makeDisplay?: string | null;
+  modelDisplay?: string | null;
   trim?: string | null;
   year?: number | null;
   price?: unknown | null;

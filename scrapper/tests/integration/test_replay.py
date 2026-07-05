@@ -106,9 +106,10 @@ def test_replay_rebuilds_offline_deterministically(config):
 
     # (a) Listings rebuilt, no marketplace access (Replayer has no adapter).
     assert len(first) == 1
-    assert first[0].make == "Toyota"
-    assert first[0].fuel_type == "Petrol"
+    assert first[0].make == "toyota"
+    assert first[0].fuel_type == "petrol"
     assert first[0].normalization_version == "norm-1"
+    assert first[0].canonicalization_version == "canonical-key-1"
 
     # (b) Deterministic: identical across runs.
     assert len(first) == len(second)

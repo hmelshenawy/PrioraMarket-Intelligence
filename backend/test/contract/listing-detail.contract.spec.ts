@@ -28,7 +28,7 @@ describe('GET /api/v1/listings/:id contract', () => {
       isAgent: null,
       neighbourhood: null,
       location: 'Dubai',
-      url: 'https://example.test/1',
+      url: 'https://dubai.dubizzle.com/motors/used-cars/toyota/camry/1234567/',
       photosCount: null,
       firstSeenRunId: '10',
       lastSeenRunId: '11',

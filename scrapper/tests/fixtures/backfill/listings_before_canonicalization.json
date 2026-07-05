@@ -1,0 +1,40 @@
+[
+  {
+    "id": 101,
+    "source": "dubizzle",
+    "uuid": "dubizzle-used-101",
+    "make": "Mercedes Benz",
+    "model": "C Class",
+    "trim": "C200",
+    "fuel_type": "Petrol",
+    "transmission": "Automatic",
+    "body_type": "Sedan",
+    "seller_type": "Dealer",
+    "condition": "Used",
+    "regional_spec": "GCC Specs",
+    "color": "Polar White",
+    "normalization_version": "legacy-normalizer",
+    "current_raw_listing_id": 501,
+    "first_seen_run_id": 1,
+    "last_seen_run_id": 2
+  },
+  {
+    "id": 102,
+    "source": "dubizzle",
+    "uuid": "dubizzle-used-102",
+    "make": "BMW",
+    "model": "7-Series",
+    "trim": "740Li",
+    "fuel_type": "Hybrid",
+    "transmission": "Auto",
+    "body_type": "Sedan",
+    "seller_type": "Owner",
+    "condition": "Used",
+    "regional_spec": "American Specs",
+    "color": "Black Sapphire",
+    "normalization_version": "legacy-normalizer",
+    "current_raw_listing_id": 502,
+    "first_seen_run_id": 1,
+    "last_seen_run_id": 2
+  }
+]

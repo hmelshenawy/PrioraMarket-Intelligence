@@ -1,0 +1,46 @@
+[
+  {
+    "marketplace": "dubizzle",
+    "marketplace_listing_id": "used-201",
+    "uuid": "dubizzle-used-201",
+    "raw_payload": {
+      "make": "Mercedes-Benz",
+      "model": "C-Class",
+      "trim": "C200",
+      "fuel_type": "Petrol",
+      "transmission": "Automatic"
+    },
+    "extracted_fields": {
+      "make": "Mercedes-Benz",
+      "model": "C-Class",
+      "trim": "C200",
+      "fuel_type": "Petrol",
+      "transmission": "Automatic"
+    },
+    "fetched_at": "2026-07-05T08:00:00+00:00",
+    "scrape_run_id": "fixture-run-001",
+    "condition": "used",
+    "make_slug": "mercedes-benz"
+  },
+  {
+    "marketplace": "dubizzle",
+    "marketplace_listing_id": "used-202",
+    "uuid": "dubizzle-used-202",
+    "raw_payload": {
+      "make": "Land Rover",
+      "model": "Range Rover",
+      "trim": "GLC300 Coupe",
+      "fuel_type": "Unknown Fuel"
+    },
+    "extracted_fields": {
+      "make": "Land Rover",
+      "model": "Range Rover",
+      "trim": "GLC300 Coupe",
+      "fuel_type": "Unknown Fuel"
+    },
+    "fetched_at": "2026-07-05T08:05:00+00:00",
+    "scrape_run_id": "fixture-run-001",
+    "condition": "used",
+    "make_slug": "land-rover"
+  }
+]
