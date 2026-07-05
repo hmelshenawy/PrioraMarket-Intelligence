@@ -13,10 +13,7 @@ export interface ListingImageProps {
 // component always renders a placeholder. photosCount is metadata only.
 export function ListingImage({ title, photosCount, className }: ListingImageProps) {
   return (
-    <div
-
-    >
-      
+    <div>
       <span className="sr-only">No photo available for {title}</span>
       {photosCount != null && photosCount > 0 && (
         <Badge variant="neutral" className="absolute right-2 top-2">
