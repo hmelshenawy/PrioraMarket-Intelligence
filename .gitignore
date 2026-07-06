@@ -59,9 +59,8 @@ run_reports/
 Thumbs.db
 *.tmp
 *.swp
-scrapper/data/
-*.jsonl
-*.csv
+
+
 scrapper/data/
 *.jsonl
 *.csv
