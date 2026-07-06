@@ -60,3 +60,5 @@ Thumbs.db
 *.tmp
 *.swp
 scrapper/data/
+*.jsonl
+*.csv
