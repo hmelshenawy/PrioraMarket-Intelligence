@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.common.canonical_hash import canonical_hash
-from src.common.models import Listing
+from src.hashing import canonical_hash
+from src.models import Listing
 
 
 def test_canonical_hash_is_order_independent() -> None:

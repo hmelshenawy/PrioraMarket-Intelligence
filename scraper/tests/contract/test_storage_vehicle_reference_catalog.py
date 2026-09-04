@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.common.models import (
+from src.models import (
     BackfillListingCandidate,
     NormalizationFieldStat,
     NormalizationStatisticsReport,
     VehicleReferenceCatalogRow,
 )
-from src.storage.in_memory import InMemoryStorageAdapter
+from tests.fakes import InMemoryStorageAdapter
 
 
 def test_storage_vehicle_reference_catalog_contract() -> None:

@@ -14,14 +14,14 @@ from datetime import datetime, timezone
 import pytest
 from conftest import load_fixture
 
-from config.config import Config
-from src.common.models import Scope
-from src.ingestion.canonicalizer import Canonicalizer
-from src.ingestion.normalizer import Normalizer
-from src.ingestion.pipeline import IngestionPipeline
-from src.marketplaces.adapter_interface import PageMetadata
-from src.marketplaces.dubizzle.extractor import extract
-from src.storage.csv_storage import CsvStorageAdapter
+from src.config import Config
+from src.fetch.algolia import PageMetadata
+from src.fetch.dubizzle_extract import extract
+from src.models import Scope
+from src.normalize.canonical import CanonicalizationEngine
+from src.normalize.normalizer import Normalizer
+from src.pipeline import IngestionPipeline
+from src.store.csv_store import CsvStorageAdapter
 
 
 class _FakeAdapter:
@@ -70,9 +70,7 @@ def config(tmp_path):
         rate_limit_max_seconds=0.0,
         request_timeout_seconds=15.0,
         normalization_version="norm-1",
-        enable_validation=True,
         enable_canonicalization=True,
-        enable_replay=True,
         enable_structured_logging=False,
         enable_csv_storage=True,
     )
@@ -87,7 +85,7 @@ def test_scoped_run_produces_listings_raw_and_report(config):
         adapter,
         storage,
         normalizer=Normalizer("norm-1"),
-        canonicalizer=Canonicalizer(),
+        canonicalizer=CanonicalizationEngine(),
     )
     scope = Scope("dubizzle", "used", "toyota")
     result = pipeline.run(scope, "run-it")

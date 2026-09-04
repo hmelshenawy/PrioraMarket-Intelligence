@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from src.common.models import VehicleReferenceCatalogRow
-from src.normalization.canonical_key import canonical_key
+from src.models import VehicleReferenceCatalogRow
+from src.normalize.canonical import canonical_key
 
 
 class VehicleReferenceCatalogValidationError(ValueError):

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.common.models import Listing, VehicleReferenceCatalogRow
-from src.ingestion.canonicalizer import Canonicalizer
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.models import Listing, VehicleReferenceCatalogRow
+from src.normalize.canonical import CanonicalizationEngine
+from tests.fakes import InMemoryStorageAdapter
 
 
 def test_canonicalization_records_alias_and_catalog_statistics() -> None:
@@ -18,9 +18,9 @@ def test_canonicalization_records_alias_and_catalog_statistics() -> None:
             aliases={"make": ["Mercedes"], "model": ["C Class"]},
         )
     )
-    canonicalizer = Canonicalizer(storage=storage)
+    canonicalizer = CanonicalizationEngine(storage=storage)
 
-    listing = canonicalizer.canonicalize(
+    listing = canonicalizer.canonicalize_listing(
         Listing(
             uuid="1",
             marketplace="dubizzle",
@@ -38,9 +38,9 @@ def test_canonicalization_records_alias_and_catalog_statistics() -> None:
 
 
 def test_canonicalization_records_unknown_values_without_blocking() -> None:
-    canonicalizer = Canonicalizer()
+    canonicalizer = CanonicalizationEngine()
 
-    listing = canonicalizer.canonicalize(
+    listing = canonicalizer.canonicalize_listing(
         Listing(
             uuid="1",
             marketplace="dubizzle",

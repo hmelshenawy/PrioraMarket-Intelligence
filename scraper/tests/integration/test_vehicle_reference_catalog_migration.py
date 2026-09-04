@@ -5,7 +5,7 @@ from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import pytest
 
-from src.db.migrate import apply as apply_migrations
+from src.migrate import apply as apply_migrations
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PRIORAMARKET_RUN_DB_TESTS") != "1" or not os.environ.get("DATABASE_URL"),
@@ -37,14 +37,12 @@ def test_vehicle_reference_catalog_migration_creates_foundation_schema() -> None
 
     with connect(database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
                   AND table_name = 'vehicle_reference_catalog'
-                """
-            )
+                """)
             catalog_columns = {row[0] for row in cur.fetchall()}
             assert {
                 "market",
@@ -59,14 +57,12 @@ def test_vehicle_reference_catalog_migration_creates_foundation_schema() -> None
                 "source_row_hash",
             }.issubset(catalog_columns)
 
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT column_name
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
                   AND table_name = 'listing'
-                """
-            )
+                """)
             listing_columns = {row[0] for row in cur.fetchall()}
             assert {
                 "fuel_type",

@@ -13,7 +13,7 @@ from datetime import datetime
 from typing import Any, Optional
 from urllib.parse import urlparse
 
-from src.common.models import RawListing
+from src.models import RawListing
 
 NUMERIC_TRIMS = ("200", "250", "300", "350", "400", "450", "500", "550", "560", "580", "63")
 MODEL_CUES = (

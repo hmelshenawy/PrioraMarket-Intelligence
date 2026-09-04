@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.common.models import RawListing, Scope
-from src.config.config import Config
-from src.ingestion.pipeline import IngestionPipeline
-from src.marketplaces.adapter_interface import PageMetadata
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.config import Config
+from src.fetch.algolia import PageMetadata
+from src.models import RawListing, Scope
+from src.pipeline import IngestionPipeline
+from tests.fakes import InMemoryStorageAdapter
 
 
 class _Adapter:
@@ -54,9 +54,7 @@ def _config(tmp_path):
         rate_limit_max_seconds=0,
         request_timeout_seconds=1,
         normalization_version="norm-1",
-        enable_validation=True,
         enable_canonicalization=True,
-        enable_replay=True,
         enable_structured_logging=False,
         enable_csv_storage=True,
     )

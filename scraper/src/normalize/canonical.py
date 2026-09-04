@@ -1,14 +1,14 @@
-"""Catalog-aware canonicalization engine shared by ingestion and replay."""
+"""Deterministic canonical keys and the catalog-aware canonicalization engine."""
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from typing import Any
 
-from src.common.models import Listing, VehicleReferenceCatalogRow
-from src.normalization.canonical_key import canonical_key
-from src.reporting.normalization_statistics import NormalizationStatisticsCollector
-from src.storage.interface import StorageAdapter
+from src.models import Listing, VehicleReferenceCatalogRow
+from src.normalize.stats import NormalizationStatisticsCollector
+from src.store.base import StorageAdapter
 
 DEFAULT_CANONICALIZATION_VERSION = "canonical-key-1"
 
@@ -195,3 +195,17 @@ def _aliases(value: dict[str, Any], field_name: str) -> set[str]:
     if not isinstance(raw_aliases, Iterable):
         return set()
     return {key for alias in raw_aliases if (key := canonical_key(alias)) is not None}
+
+
+_NON_ALNUM = re.compile(r"[^a-z0-9]+")
+
+
+def canonical_key(value: Any) -> str | None:
+    """Return the immutable key form while preserving semantic letters/numbers."""
+    if value is None:
+        return None
+    text = str(value).strip().lower()
+    if not text:
+        return None
+    key = _NON_ALNUM.sub("", text)
+    return key or None

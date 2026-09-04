@@ -7,10 +7,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.common.canonical_hash import canonical_hash
-from src.common.models import VehicleReferenceCatalogRow
-from src.normalization.canonical_key import canonical_key
-from src.normalization.vehicle_reference_catalog import validate_vehicle_reference_catalog_row
+from src.hashing import canonical_hash
+from src.models import VehicleReferenceCatalogRow
+from src.normalize.canonical import canonical_key
+from src.store.catalog_validation import validate_vehicle_reference_catalog_row
 
 REQUIRED_COLUMNS = (
     "market",

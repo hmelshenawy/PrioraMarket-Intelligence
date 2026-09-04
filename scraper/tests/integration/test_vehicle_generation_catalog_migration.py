@@ -6,8 +6,18 @@ from urllib.parse import quote, unquote, urlsplit, urlunsplit
 
 import pytest
 
-from src.db.migrate import apply as apply_migrations
-from src.db.seed_vehicle_catalog import import_vehicle_catalog
+from src.migrate import apply as apply_migrations
+from src.store.catalog_sync import synchronize_vehicle_reference_catalog
+from src.store.pool import DatabaseSettings, create_pool
+from src.store.postgres import PostgresStore
+
+
+def _import_vehicle_catalog(path, database_url):
+    """Apply migrations, then sync a catalog CSV directory (ex-migrate sync-catalog)."""
+    apply_migrations(database_url)
+    pool = create_pool(DatabaseSettings(database_url=database_url))
+    return synchronize_vehicle_reference_catalog(PostgresStore(pool), path)
+
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PRIORAMARKET_RUN_DB_TESTS") != "1" or not os.environ.get("DATABASE_URL"),
@@ -40,26 +50,22 @@ def test_vehicle_generation_catalog_migration_creates_expected_schema() -> None:
 
     with connect(database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT EXISTS (
                     SELECT 1
                     FROM information_schema.tables
                     WHERE table_schema = 'public'
                       AND table_name = 'vehicle_generation_catalog'
                 )
-                """
-            )
+                """)
             assert cur.fetchone()[0] is True
 
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT column_name, data_type, is_nullable, column_default
                 FROM information_schema.columns
                 WHERE table_schema = 'public'
                   AND table_name = 'vehicle_generation_catalog'
-                """
-            )
+                """)
             columns = {row[0]: row[1:] for row in cur.fetchall()}
 
             expected_columns = {
@@ -92,13 +98,11 @@ def test_vehicle_generation_catalog_migration_creates_expected_schema() -> None:
             assert "now()" in columns["created_at"][2]
             assert "now()" in columns["updated_at"][2]
 
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT conname, contype, pg_get_constraintdef(oid)
                 FROM pg_constraint
                 WHERE conrelid = 'public.vehicle_generation_catalog'::regclass
-                """
-            )
+                """)
             constraints = {row[0]: (row[1], row[2]) for row in cur.fetchall()}
             assert any(
                 contype == "p" and "PRIMARY KEY (id)" in definition
@@ -113,14 +117,12 @@ def test_vehicle_generation_catalog_migration_creates_expected_schema() -> None:
                 "UNIQUE (market, make_key, model_key, generation, body_code)",
             )
 
-            cur.execute(
-                """
+            cur.execute("""
                 SELECT indexname, indexdef
                 FROM pg_indexes
                 WHERE schemaname = 'public'
                   AND tablename = 'vehicle_generation_catalog'
-                """
-            )
+                """)
             indexes = {row[0]: row[1] for row in cur.fetchall()}
             assert "idx_vehicle_generation_catalog_market_make_model" in indexes
             assert (
@@ -196,7 +198,7 @@ def test_vehicle_catalog_import_upserts_and_allows_market_specific_duplicates(tm
             _catalog_row(slugs[1], "uae", "2015"),
         ],
     )
-    summary = import_vehicle_catalog(tmp_path, database_url)
+    summary = _import_vehicle_catalog(tmp_path, database_url)
 
     assert summary.files_read == 1
     assert summary.rows_inserted == 2
@@ -211,7 +213,7 @@ def test_vehicle_catalog_import_upserts_and_allows_market_specific_duplicates(tm
             _catalog_row(slugs[1], "uae", "2015"),
         ],
     )
-    summary = import_vehicle_catalog(tmp_path, database_url)
+    summary = _import_vehicle_catalog(tmp_path, database_url)
 
     assert summary.rows_inserted == 0
     assert summary.rows_updated == 1

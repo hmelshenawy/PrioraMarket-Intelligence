@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.common.models import BackfillListingCandidate, RawListing
-from src.maintenance.canonical_backfill import CanonicalBackfillService
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.backfill import CanonicalBackfillService
+from src.models import BackfillListingCandidate, RawListing
+from tests.fakes import InMemoryStorageAdapter
 
 
 def test_canonical_backfill_preserves_raw_payload_and_raw_rows() -> None:

@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from src.common.models import BackfillListingCandidate
-from src.maintenance.canonical_backfill import CanonicalBackfillService
-from src.storage.in_memory import InMemoryStorageAdapter
-from src.storage.postgres_storage import PostgresStorageAdapter
+from src.backfill import CanonicalBackfillService
+from src.models import BackfillListingCandidate
+from src.store.postgres import PostgresStore
+from tests.fakes import InMemoryStorageAdapter
 
 
-class _CapturingPostgresStorage(PostgresStorageAdapter):
+class _CapturingPostgresStorage(PostgresStore):
     def __init__(self):
         super().__init__(pool=None)
         self.sql = ""

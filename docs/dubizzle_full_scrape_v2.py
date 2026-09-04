@@ -7,6 +7,7 @@ Dubizzle Full Scrape v2 — Used + New Cars
 """
 
 import csv
+import os
 import random
 import time
 from collections import Counter
@@ -18,8 +19,8 @@ from dotenv import load_dotenv
 
 load_dotenv()  # Load .env file if present
 
-ALGOLIA_APP_ID = "WD0PTZ13ZS"
-ALGOLIA_API_KEY = "cef139620248f1bc328a00fddc7107a6"
+ALGOLIA_APP_ID = os.environ["ALGOLIA_APP_ID"]
+ALGOLIA_API_KEY = os.environ["ALGOLIA_API_KEY"]
 ALGOLIA_INDEX = "by_added_desc_motors.com"
 ALGOLIA_URL = f"https://{ALGOLIA_APP_ID}-dsn.algolia.net/1/indexes/*/queries"
 HITS_PER_PAGE = 20

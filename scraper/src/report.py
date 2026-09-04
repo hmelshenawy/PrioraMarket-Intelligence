@@ -9,9 +9,9 @@ finalization.
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
-from src.common.models import RunReport, RunState
+from src.models import RunReport, RunState
 
 
 def finalize(report: RunReport) -> RunReport:
@@ -19,8 +19,6 @@ def finalize(report: RunReport) -> RunReport:
 
     - pages_per_second / listings_per_second from execution duration.
     - total_duration_seconds from start/end wall-clock timestamps.
-    - peak_memory / peak_cpu best-effort via stdlib ``resource`` (POSIX);
-      None where unavailable (e.g. Windows). No extra dependencies.
     """
     if report.execution_duration_seconds and report.execution_duration_seconds > 0:
         report.pages_per_second = round(
@@ -30,25 +28,7 @@ def finalize(report: RunReport) -> RunReport:
             report.listings_extracted / report.execution_duration_seconds, 3
         )
     report.total_duration_seconds = report.execution_duration_seconds
-    mem, cpu = _best_effort_resource_usage()
-    if mem is not None and report.peak_memory is None:
-        report.peak_memory = mem
-    if cpu is not None and report.peak_cpu is None:
-        report.peak_cpu = cpu
     return report
-
-
-def _best_effort_resource_usage() -> tuple[Optional[int], Optional[float]]:
-    try:
-        import resource  # POSIX only; absent on Windows
-
-        usage = resource.getrusage(resource.RUSAGE_SELF)
-        # ru_maxrss is in KB on Linux, bytes on macOS; report as bytes-ish.
-        peak_mem = int(usage.ru_maxrss) * 1024
-        peak_cpu = float(getattr(usage, "ru_utime", 0.0) + getattr(usage, "ru_stime", 0.0))
-        return peak_mem, round(peak_cpu, 3)
-    except Exception:
-        return None, None
 
 
 def stop_position(report: RunReport) -> dict[str, Any]:
@@ -99,8 +79,6 @@ def extended_summary(report: RunReport) -> dict[str, Any]:
             "start_time": report.start_time,
             "end_time": report.end_time,
             "total_duration_seconds": report.total_duration_seconds,
-            "peak_memory": report.peak_memory,
-            "peak_cpu": report.peak_cpu,
             "stop_position": stop_position(report),
         }
     )

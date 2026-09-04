@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from src.common.models import BackfillListingCandidate
-from src.maintenance.canonical_backfill import CanonicalBackfillService
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.backfill import CanonicalBackfillService
+from src.models import BackfillListingCandidate
+from tests.fakes import InMemoryStorageAdapter
 
 
 def test_canonical_backfill_is_idempotent_for_unchanged_inputs() -> None:

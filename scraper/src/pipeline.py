@@ -1,7 +1,7 @@
 """Pipeline orchestration (FR-008, FR-009, FR-023, FR-061).
 
 Drives a single ingestion scope through the domain pipeline:
-MarketplaceAdapter -> Normalizer -> Canonicalizer -> Validator ->
+MarketplaceAdapter -> Normalizer -> CanonicalizationEngine -> Validator ->
 StorageAdapter, recording state transitions and basic metrics into a
 RunReport. US1 ships the happy-path state machine; US2/US3 harden failure
 isolation and the validation gate on top of this structure.
@@ -14,8 +14,10 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-from src.common.logger import get_logger
-from src.common.models import (
+from src.config import Config
+from src.fetch.algolia import MarketplaceAdapter
+from src.logging_setup import get_logger
+from src.models import (
     DatasetVersion,
     IngestionRun,
     Listing,
@@ -24,13 +26,11 @@ from src.common.models import (
     RunState,
     Scope,
 )
-from src.common.validation import MinimalValidator, Validator
-from src.config.config import Config
-from src.ingestion.canonicalizer import Canonicalizer
-from src.ingestion.normalizer import Normalizer
-from src.marketplaces.adapter_interface import MarketplaceAdapter
-from src.reporting.run_report import finalize
-from src.storage.interface import StorageAdapter
+from src.normalize.canonical import CanonicalizationEngine
+from src.normalize.normalizer import Normalizer
+from src.report import finalize
+from src.store.base import StorageAdapter
+from src.validation import Validator
 
 
 @dataclass
@@ -49,16 +49,16 @@ class IngestionPipeline:
         adapter: MarketplaceAdapter,
         storage: StorageAdapter,
         normalizer: Optional[Normalizer] = None,
-        canonicalizer: Optional[Canonicalizer] = None,
-        validator: Optional[MinimalValidator] = None,
+        canonicalizer: Optional[CanonicalizationEngine] = None,
+        validator: Optional[Validator] = None,
     ):
         self._config = config
         self._adapter = adapter
         self._storage = storage
         self._normalizer = normalizer or Normalizer(config.normalization_version)
-        self._canonicalizer = canonicalizer or Canonicalizer(
-            config.canonicalization_version,
+        self._canonicalizer = canonicalizer or CanonicalizationEngine(
             storage=storage,
+            version=config.canonicalization_version,
             market="global",
             operation="ingestion",
         )
@@ -144,12 +144,11 @@ class IngestionPipeline:
 
             report.state = RunState.CANONICALIZING
             if self._config.enable_canonicalization:
-                if hasattr(self._canonicalizer, "reset_statistics"):
-                    self._canonicalizer.reset_statistics()
+                self._canonicalizer.reset_statistics()
                 canonicalized: list[Listing] = []
                 for listing in normalized:
                     try:
-                        canonicalized.append(self._canonicalizer.canonicalize(listing))
+                        canonicalized.append(self._canonicalizer.canonicalize_listing(listing))
                     except Exception as exc:  # isolate per-record failures
                         listings_skipped += 1
                         failures += 1
@@ -159,8 +158,7 @@ class IngestionPipeline:
                             extra={"uuid": listing.uuid, "error": str(exc)},
                         )
                 normalized = canonicalized
-                if hasattr(self._canonicalizer, "report"):
-                    self._storage.write_normalization_statistics(self._canonicalizer.report())
+                self._storage.write_normalization_statistics(self._canonicalizer.report())
 
             report.state = RunState.VALIDATING
             for listing in normalized:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.normalization.canonical_key import canonical_key
+from src.normalize.canonical import canonical_key
 
 
 def test_canonical_key_removes_separators_and_punctuation() -> None:

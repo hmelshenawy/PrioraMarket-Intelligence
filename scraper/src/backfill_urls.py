@@ -10,31 +10,16 @@ from __future__ import annotations
 
 import argparse
 import os
-from pathlib import Path
 from urllib.parse import quote
 
+from dotenv import load_dotenv
 from psycopg.rows import dict_row
 
-from src.common.canonical_hash import canonical_hash, canonical_payload
-from src.common.models import RawListing, Scope
-from src.ingestion.canonicalizer import Canonicalizer
-from src.ingestion.normalizer import Normalizer
-from src.marketplaces.dubizzle.extractor import extract
-
-
-def _load_env(path: str | None) -> None:
-    for candidate in [path, ".env", "scrapper/.env"]:
-        if not candidate:
-            continue
-        env_path = Path(candidate)
-        if not env_path.exists():
-            continue
-        for line in env_path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+from src.fetch.dubizzle_extract import extract
+from src.hashing import canonical_hash, canonical_payload
+from src.models import RawListing, Scope
+from src.normalize.canonical import CanonicalizationEngine
+from src.normalize.normalizer import Normalizer
 
 
 def _safe_dsn(dsn: str) -> str:
@@ -52,7 +37,9 @@ def _raw_listing(row) -> RawListing:
     raw_payload = row["raw_payload"] or {}
     return RawListing(
         marketplace=row["source"],
-        marketplace_listing_id=str(raw_payload.get("id")) if raw_payload.get("id") is not None else row["uuid"],
+        marketplace_listing_id=(
+            str(raw_payload.get("id")) if raw_payload.get("id") is not None else row["uuid"]
+        ),
         uuid=row["uuid"],
         raw_payload=raw_payload,
         extracted_fields={},
@@ -64,20 +51,23 @@ def _raw_listing(row) -> RawListing:
 
 
 def run(*, env: str | None, apply: bool, limit: int | None, normalization_version: str) -> int:
-    _load_env(env)
+    load_dotenv(env)
     database_url = os.environ.get("DATABASE_URL")
     if not database_url:
         raise SystemExit("DATABASE_URL is required")
 
-    import psycopg
+    from src.store.pool import DatabaseSettings, create_pool
 
-    canonicalizer = Canonicalizer()
+    pool = create_pool(
+        DatabaseSettings(database_url=_safe_dsn(database_url), pool_min=1, pool_max=1)
+    )
+    canonicalizer = CanonicalizationEngine()
     updates = []
     skipped = 0
     samples = []
 
-    with psycopg.connect(_safe_dsn(database_url), row_factory=dict_row, connect_timeout=10) as conn:
-        with conn.cursor() as cur:
+    with pool.connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cur:
             cur.execute(
                 """
                 SELECT
@@ -96,8 +86,7 @@ def run(*, env: str | None, apply: bool, limit: int | None, normalization_versio
                 WHERE l.source = 'dubizzle'
                   AND (l.url IS NULL OR l.url LIKE %s)
                 ORDER BY l.id
-                """
-                + (" LIMIT %s" if limit else ""),
+                """ + (" LIMIT %s" if limit else ""),
                 ("%/countries/%", limit) if limit else ("%/countries/%",),
             )
             rows = cur.fetchall()
@@ -119,7 +108,7 @@ def run(*, env: str | None, apply: bool, limit: int | None, normalization_versio
                     enriched,
                     Scope(raw.marketplace, raw.condition, raw.make_slug or "unknown"),
                 )
-                listing = canonicalizer.canonicalize(listing)
+                listing = canonicalizer.canonicalize_listing(listing)
                 payload = canonical_payload(listing)
                 updates.append(
                     (

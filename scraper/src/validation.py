@@ -5,16 +5,13 @@ values, and basic data consistency, producing a ValidationResult. Run-
 level UUID deduplication keeps the newest occurrence and counts the rest
 as duplicates. Validation is NEVER fatal: invalid/duplicate records are
 logged and counted as skipped (the pipeline enforces this).
-
-US1's MinimalValidator is retained as a thin alias for the happy-path
-story; US3 swaps the pipeline default to Validator.
 """
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.common.models import Listing, ValidationResult
+from src.models import Listing, ValidationResult
 
 # Required fields for a listing to be persisted (FR-031).
 REQUIRED_FIELDS = ("uuid", "make", "price")
@@ -109,14 +106,3 @@ class Validator:
         deduped = [winner[k] for k in first_seen_order]
         duplicate_count = sum(counts.values())
         return deduped, duplicate_count
-
-
-class MinimalValidator(Validator):
-    """US1 happy-path validator (T017). US3 replaces it with Validator.
-
-    Kept as an alias so US1 tests remain independently meaningful; the
-    full ruleset lives in the base class.
-    """
-
-    def __init__(self):
-        super().__init__(required_fields=("uuid",))

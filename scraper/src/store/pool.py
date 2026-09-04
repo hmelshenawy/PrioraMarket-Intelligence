@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from src.config.config import Config
+from src.config import Config
 
 
 class StorageConnectionError(Exception):

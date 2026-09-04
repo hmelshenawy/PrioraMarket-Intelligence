@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "prioramarket-ingestion"
 version = "0.1.0"
-description = "PrioraMarket Intelligence — Data Ingestion Foundation (Feature 001)"
+description = "PrioraMarket Intelligence — marketplace ingestion pipeline"
 requires-python = ">=3.11"
 dependencies = [
     "requests>=2.31",
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-prioramarket = "ingestion.runner:main"
+prioramarket = "cli:main"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

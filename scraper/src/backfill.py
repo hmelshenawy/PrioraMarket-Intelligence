@@ -5,13 +5,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Callable
 
-from src.common.canonical_hash import canonical_hash, canonical_payload
-from src.common.models import BackfillListingCandidate, Listing, NormalizationStatisticsReport
-from src.normalization.canonicalization_engine import (
+from src.hashing import canonical_hash, canonical_payload
+from src.models import BackfillListingCandidate, Listing, NormalizationStatisticsReport
+from src.normalize.canonical import (
     DEFAULT_CANONICALIZATION_VERSION,
     CanonicalizationEngine,
 )
-from src.storage.interface import StorageAdapter
+from src.store.base import StorageAdapter
 
 
 @dataclass

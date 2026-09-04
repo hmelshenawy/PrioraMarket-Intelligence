@@ -13,9 +13,9 @@ from datetime import datetime, timezone
 import pytest
 from conftest import load_fixture
 
-from src.common.models import Scope
-from src.ingestion.normalizer import Normalizer
-from src.marketplaces.dubizzle.extractor import extract
+from src.fetch.dubizzle_extract import extract
+from src.models import Scope
+from src.normalize.normalizer import Normalizer
 
 
 def _prototype_extract(hit: dict) -> dict:

@@ -8,8 +8,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.common.models import Listing
-from src.common.validation import Validator
+from src.models import Listing
+from src.validation import Validator
 
 
 def _listing(**overrides) -> Listing:

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from src.common.models import VehicleReferenceCatalogRow
-from src.normalization.vehicle_reference_catalog import (
+from src.models import VehicleReferenceCatalogRow
+from src.store.catalog_validation import (
     VehicleReferenceCatalogValidationError,
     validate_vehicle_reference_catalog_row,
 )

@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import replace
 from pathlib import Path
 
-from src.db.vehicle_reference_catalog_sync import synchronize_vehicle_reference_catalog
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.store.catalog_sync import synchronize_vehicle_reference_catalog
+from tests.fakes import InMemoryStorageAdapter
 
 FIXTURE = (
     Path(__file__).parents[1]

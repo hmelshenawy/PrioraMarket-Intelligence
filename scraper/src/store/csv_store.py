@@ -1,38 +1,28 @@
-"""CSV StorageAdapter implementation (FR-050..052, FR-053..056).
+"""CSV run artifacts (debug backend, FR-053..056).
 
-Persists RawListings (verbatim JSON-lines), canonicalized Listings (CSV),
-and RunReport (JSON) under a run-scoped output directory. The ingestion
-pipeline depends only on the StorageAdapter interface, so this CSV
-implementation can be replaced by a database adapter without touching
-ingestion logic (SC-008).
+Writes RawListings (verbatim JSON-lines), canonicalized Listings (CSV),
+and the RunReport (JSON) under a run-scoped output directory. PostgreSQL
+is the production backend; this backend exists for local inspection.
 """
 
 from __future__ import annotations
 
 import csv
 import json
-from datetime import datetime
 from pathlib import Path
-from typing import Iterable, Iterator, Optional
+from typing import Iterable
 
-from src.common.models import (
-    BackfillListingCandidate,
-    CatalogSyncReport,
+from src.models import (
     Listing,
-    ListingRow,
     NormalizationStatisticsReport,
     RawListing,
-    RunContext,
     RunReport,
-    RunRow,
-    SnapshotRow,
     VehicleReferenceCatalogRow,
 )
-from src.storage.interface import MarketplaceSourceNotFoundError
 
 
 class CsvStorageAdapter:
-    """Filesystem CSV/JSON storage implementing StorageAdapter."""
+    """Filesystem CSV/JSON run artifacts implementing StorageAdapter."""
 
     def __init__(self, output_dir: Path, run_id: str):
         self._root = Path(output_dir)
@@ -53,24 +43,21 @@ class CsvStorageAdapter:
         return self._run_dir / "run_report.json"
 
     def write_raw(self, raw_listings: Iterable[RawListing]) -> int:
-        path = self.raw_path()
         count = 0
-        with open(path, "w", encoding="utf-8") as f:
+        with open(self.raw_path(), "w", encoding="utf-8") as f:
             for raw in raw_listings:
                 f.write(json.dumps(self._raw_to_dict(raw), default=str) + "\n")
                 count += 1
         return count
 
     def write_listings(self, listings: Iterable[Listing]) -> int:
-        listings = list(listings)
-        if not listings:
-            return 0
-        path = self.listings_path()
         records = [listing.to_record() for listing in listings]
+        if not records:
+            return 0
         # Stable column order: known fields then any lineage extras.
-        known = list(records[0].keys())
-        with open(path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=known)
+        fieldnames = list(records[0].keys())
+        with open(self.listings_path(), "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
             writer.writeheader()
             writer.writerows(records)
         return len(records)
@@ -79,102 +66,12 @@ class CsvStorageAdapter:
         with open(self.report_path(), "w", encoding="utf-8") as f:
             json.dump(report.to_dict(), f, indent=2, default=str)
 
-    def read_raw(self, dataset_version: Optional[str] = None) -> Iterator[RawListing]:
-        """Read stored RawListings. If dataset_version given, read that run dir."""
-        from datetime import datetime
-
-        path = self.raw_path()
-        if dataset_version is not None:
-            # dataset_version currently maps to a run_id directory.
-            alt = self._root / dataset_version / "raw_listings.jsonl"
-            if alt.exists():
-                path = alt
-        if not path.exists():
-            return
-        with open(path, encoding="utf-8") as f:
-            for line in f:
-                if not line.strip():
-                    continue
-                d = json.loads(line)
-                yield RawListing(
-                    marketplace=d["marketplace"],
-                    marketplace_listing_id=d.get("marketplace_listing_id"),
-                    uuid=d.get("uuid"),
-                    raw_payload=d.get("raw_payload") or {},
-                    extracted_fields=d.get("extracted_fields") or {},
-                    fetched_at=datetime.fromisoformat(d["fetched_at"]),
-                    scrape_run_id=d["scrape_run_id"],
-                    condition=d.get("condition", ""),
-                    make_slug=d.get("make_slug"),
-                )
-
-    def resolve_marketplace_source_by_code(self, code: str):
-        raise MarketplaceSourceNotFoundError(code)
-
-    def find_listing_by_source_uuid(self, source: str, uuid: str) -> ListingRow | None:
-        return None
-
-    def insert_listing(self, row: ListingRow) -> int:
-        return 0
-
-    def insert_raw_listing(self, raw: RawListing, ctx: RunContext) -> int:
-        return 0
-
-    def update_listing(self, listing_id: int, row: ListingRow) -> None:
-        return None
-
-    def insert_snapshot(self, snap: SnapshotRow) -> int:
-        return 0
-
-    def resolve_run(self, run_name_or_id: str) -> RunRow | None:
-        return None
-
-    def read_raw_for_run(self, run_name_or_id: str) -> Iterator[RawListing]:
-        yield from self.read_raw(run_name_or_id)
-
-    def insert_ingestion_run(self, run: RunRow) -> int:
-        return 0
-
-    def finalize_ingestion_run(
-        self, run_id: int, report: RunReport, status: str, completed_at: datetime
-    ) -> None:
-        return None
-
-    def begin_listing_unit(self) -> None:
-        return None
-
-    def commit_listing_unit(self) -> None:
-        return None
-
-    def rollback_listing_unit(self) -> None:
-        return None
-
     def find_vehicle_reference_catalog(
         self, market: str, make_key: str, model_key: str | None = None
     ) -> list[VehicleReferenceCatalogRow]:
         return []
 
-    def upsert_vehicle_reference_catalog(
-        self, rows: Iterable[VehicleReferenceCatalogRow], source_file: str
-    ) -> CatalogSyncReport:
-        return CatalogSyncReport(source_file=source_file, unchanged=len(list(rows)))
-
     def write_normalization_statistics(self, report: NormalizationStatisticsReport) -> None:
-        return None
-
-    def read_listing_backfill_candidates(
-        self, batch_size: int, after_id: int | None = None
-    ) -> Iterator[BackfillListingCandidate]:
-        return iter(())
-
-    def update_listing_backfill_payload(
-        self,
-        listing_id: int,
-        canonical_payload: dict,
-        canonical_hash: str,
-        normalization_version: str,
-        canonicalization_version: str,
-    ) -> None:
         return None
 
     @staticmethod

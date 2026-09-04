@@ -13,10 +13,9 @@ from datetime import datetime, timezone
 import pytest
 from conftest import load_fixture
 
-from src.common.models import RawListing, Scope
-from src.marketplaces.adapter_interface import MarketplaceAdapter, PageMetadata
-from src.marketplaces.dubizzle.adapter import DubizzleAdapter
-from src.marketplaces.dubizzle.extractor import extract
+from src.fetch.algolia import DubizzleAdapter, MarketplaceAdapter, PageMetadata
+from src.fetch.dubizzle_extract import extract
+from src.models import RawListing, Scope
 
 
 class _StubResponse:
@@ -67,7 +66,7 @@ def config(monkeypatch):
         "RETRY_BACKOFF": "0",
     }.items():
         monkeypatch.setenv(k, v)
-    from config.config import load_config
+    from src.config import load_config
 
     return load_config()
 

@@ -43,14 +43,14 @@ pnpm-debug.log*
 
 # Ingestion outputs (data artifacts, run reports, fixtures output)
 data/
-!scrapper/data/
-!scrapper/data/reference/
+!scraper/data/
+!scraper/data/reference/
 output/
 outputs/
 *.csv
 !tests/fixtures/**/*.csv
-!scrapper/tests/fixtures/**/*.csv
-!scrapper/data/reference/**/*.csv
+!scraper/tests/fixtures/**/*.csv
+!scraper/data/reference/**/*.csv
 run_reports/
 *.log
 
@@ -61,6 +61,6 @@ Thumbs.db
 *.swp
 
 
-scrapper/data/
+scraper/data/
 *.jsonl
 *.csv

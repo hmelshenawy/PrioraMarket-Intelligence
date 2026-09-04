@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from src.common.run_naming import build_run_name, collision_disambiguator, slug_segment
+from src.run_naming import build_run_name, collision_disambiguator, slug_segment
 
 
 def test_run_name_uses_utc_slugged_segments() -> None:

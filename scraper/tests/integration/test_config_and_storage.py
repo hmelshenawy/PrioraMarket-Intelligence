@@ -15,13 +15,13 @@ from datetime import datetime, timezone
 import pytest
 from conftest import load_fixture
 
-from src.common.models import Scope
-from src.ingestion.canonicalizer import Canonicalizer
-from src.ingestion.normalizer import Normalizer
-from src.ingestion.pipeline import IngestionPipeline
-from src.marketplaces.adapter_interface import PageMetadata
-from src.marketplaces.dubizzle.extractor import extract
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.fetch.algolia import PageMetadata
+from src.fetch.dubizzle_extract import extract
+from src.models import Scope
+from src.normalize.canonical import CanonicalizationEngine
+from src.normalize.normalizer import Normalizer
+from src.pipeline import IngestionPipeline
+from tests.fakes import InMemoryStorageAdapter
 
 
 class _FakeAdapter:
@@ -67,11 +67,10 @@ def _env(monkeypatch, **overrides):
         "RATE_LIMIT_MAX_SECONDS": "0",
         "REQUEST_TIMEOUT_SECONDS": "15",
         "NORMALIZATION_VERSION": "norm-1",
-        "ENABLE_VALIDATION": "true",
         "ENABLE_CANONICALIZATION": "true",
-        "ENABLE_REPLAY": "true",
         "ENABLE_STRUCTURED_LOGGING": "false",
         "ENABLE_CSV_STORAGE": "true",
+        "STORAGE_BACKEND": "csv",
     }
     base.update(overrides)
     for k, v in base.items():
@@ -81,7 +80,7 @@ def _env(monkeypatch, **overrides):
 def test_fail_fast_on_missing_required_value(monkeypatch):
     _env(monkeypatch)
     monkeypatch.delenv("ALGOLIA_API_KEY", raising=False)
-    from config import config as config_mod
+    from src import config as config_mod
 
     importlib.reload(config_mod)
     # Use a non-existent env path so the project's real .env (CWD) is NOT
@@ -93,13 +92,12 @@ def test_fail_fast_on_missing_required_value(monkeypatch):
 
 def test_env_driven_config_loads_all_feature_flags(monkeypatch):
     _env(monkeypatch, ENABLE_CANONICALIZATION="false", ENABLE_STRUCTURED_LOGGING="false")
-    from config import config as config_mod
+    from src import config as config_mod
 
     importlib.reload(config_mod)
     cfg = config_mod.load_config()
     assert cfg.enable_canonicalization is False
     assert cfg.enable_structured_logging is False
-    assert cfg.enable_validation is True
     assert cfg.enable_csv_storage is True
     assert cfg.normalization_version == "norm-1"
     # Snapshot excludes secrets.
@@ -110,7 +108,7 @@ def test_env_driven_config_loads_all_feature_flags(monkeypatch):
 
 def test_feature_flag_disables_canonicalization(monkeypatch):
     _env(monkeypatch, ENABLE_CANONICALIZATION="false")
-    from config import config as config_mod
+    from src import config as config_mod
 
     importlib.reload(config_mod)
     cfg = config_mod.load_config()
@@ -123,7 +121,7 @@ def test_feature_flag_disables_canonicalization(monkeypatch):
         adapter,
         storage,
         normalizer=Normalizer("norm-1"),
-        canonicalizer=Canonicalizer(),
+        canonicalizer=CanonicalizationEngine(),
     )
     result = pipeline.run(Scope("dubizzle", "used", "toyota"), "run-flag")
     listing = result.accepted[0]
@@ -134,7 +132,7 @@ def test_feature_flag_disables_canonicalization(monkeypatch):
 
 def test_storage_substitutability_in_memory(monkeypatch):
     _env(monkeypatch)
-    from config import config as config_mod
+    from src import config as config_mod
 
     importlib.reload(config_mod)
     cfg = config_mod.load_config()
@@ -147,7 +145,7 @@ def test_storage_substitutability_in_memory(monkeypatch):
         adapter,
         storage,
         normalizer=Normalizer("norm-1"),
-        canonicalizer=Canonicalizer(),
+        canonicalizer=CanonicalizationEngine(),
     )
     result = pipeline.run(Scope("dubizzle", "used", "toyota"), "run-sub")
     assert result.report.state.value == "COMPLETED"

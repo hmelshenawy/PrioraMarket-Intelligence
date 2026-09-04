@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from src.common.models import Listing
-from src.ingestion.canonicalizer import Canonicalizer
+from src.models import Listing
+from src.normalize.canonical import CanonicalizationEngine
 
 
 def test_supported_categorical_fields_are_canonicalized_to_keys() -> None:
@@ -23,7 +23,7 @@ def test_supported_categorical_fields_are_canonicalized_to_keys() -> None:
         color="Obsidian Black Metallic",
     )
 
-    canonical = Canonicalizer().canonicalize(listing)
+    canonical = CanonicalizationEngine().canonicalize_listing(listing)
 
     assert canonical.make == "mercedesbenz"
     assert canonical.model == "e53amg"

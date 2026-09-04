@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from src.common.models import Listing, RawListing, Scope
+from src.models import Listing, RawListing, Scope
 
 # The normalizer ruleset version. Bump when mapping logic changes; replay
 # uses this to select which ruleset to apply.

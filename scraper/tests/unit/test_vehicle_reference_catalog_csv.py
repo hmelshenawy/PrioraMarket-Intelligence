@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 
-from src.db.vehicle_reference_catalog_csv import read_vehicle_reference_catalog_csv
+from src.store.catalog_csv import read_vehicle_reference_catalog_csv
 
 
 def _row(**overrides):

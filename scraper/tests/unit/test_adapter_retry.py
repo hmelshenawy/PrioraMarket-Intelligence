@@ -11,8 +11,8 @@ import pytest
 import requests
 from conftest import load_fixture
 
-from src.common.models import Scope
-from src.marketplaces.dubizzle.adapter import DubizzleAdapter
+from src.fetch.algolia import DubizzleAdapter
+from src.models import Scope
 
 
 class _Resp:
@@ -65,7 +65,7 @@ def config(monkeypatch):
         "REQUEST_TIMEOUT_SECONDS": "15",
     }.items():
         monkeypatch.setenv(k, v)
-    from config.config import load_config
+    from src.config import load_config
 
     return load_config()
 

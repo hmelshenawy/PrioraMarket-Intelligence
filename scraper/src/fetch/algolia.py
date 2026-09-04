@@ -12,16 +12,16 @@ from __future__ import annotations
 
 import random
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Iterator, Optional
+from typing import Any, Iterable, Iterator, Optional, Protocol, runtime_checkable
 
 import requests
 
-from src.common.logger import get_logger
-from src.common.models import RawListing, Scope
-from src.config.config import Config
-from src.marketplaces.adapter_interface import PageMetadata
-from src.marketplaces.dubizzle.extractor import extract
+from src.config import Config
+from src.fetch.dubizzle_extract import extract
+from src.logging_setup import get_logger
+from src.models import RawListing, Scope
 
 # Attribute list preserved exactly from the prototype for parity (SC-001).
 ATTRIBUTES_TO_RETRIEVE = (
@@ -183,3 +183,35 @@ class DubizzleAdapter:
         lo = self._config.rate_limit_min_seconds
         hi = self._config.rate_limit_max_seconds
         time.sleep(random.uniform(lo, hi))
+
+
+@dataclass
+class PageMetadata:
+    """Per-page fetch metadata emitted alongside RawListings."""
+
+    page: int
+    hits_on_page: int
+    nb_pages: Optional[int] = None
+    nb_hits: Optional[int] = None
+    retried: bool = False
+
+
+@runtime_checkable
+class MarketplaceAdapter(Protocol):
+    """Stream RawListings for a single scope (marketplace, condition, make)."""
+
+    scope: Scope
+
+    def fetch(self, scope: Scope) -> Iterable[tuple[list[RawListing], PageMetadata]]:
+        """Yield (page_listings, metadata) tuples, one per fetched page.
+
+        Page 0 metadata MUST include nb_pages / nb_hits so the pipeline can
+        apply the pagination cap. Each RawListing preserves the marketplace
+        payload verbatim in ``raw_payload``.
+        """
+        ...
+
+    @property
+    def marketplace_name(self) -> str:
+        """Stable marketplace identifier (e.g. "dubizzle")."""
+        ...

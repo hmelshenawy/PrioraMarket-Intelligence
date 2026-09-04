@@ -5,12 +5,10 @@ from datetime import datetime, timezone
 
 from conftest import load_fixture
 
-from src.common.canonical_hash import canonical_payload
-from src.common.models import RawListing, Scope
-from src.ingestion.normalizer import Normalizer
-from src.marketplaces.dubizzle.extractor import derive_trim_from_title, extract
-from src.replay.replayer import Replayer
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.fetch.dubizzle_extract import derive_trim_from_title, extract
+from src.hashing import canonical_payload
+from src.models import Scope
+from src.normalize.normalizer import Normalizer
 
 
 def _hit(name: str, *, structured_trim=None, year=2021, price=95000, km=45000):
@@ -88,59 +86,3 @@ def test_normalized_listing_promotes_trim_into_canonical_payload():
     assert listing.trim_source == "derived_title"
     assert canonical_payload(listing)["trim"] == "450"
     assert canonical_payload(listing)["trim_source"] == "derived_title"
-
-
-def test_replay_backfills_trim_from_preserved_raw_payload_when_extracted_trim_is_missing():
-    hit = _hit("Mercedes-Benz E 300 GCC Specs")
-    raw = RawListing(
-        marketplace="dubizzle",
-        marketplace_listing_id="listing-1",
-        uuid=hit["uuid"],
-        raw_payload=hit,
-        extracted_fields={"uuid": hit["uuid"], "trim": None},
-        fetched_at=datetime(2026, 7, 4, tzinfo=timezone.utc),
-        scrape_run_id="run-old",
-        condition="used",
-        make_slug="mercedes-benz",
-    )
-    storage = InMemoryStorageAdapter()
-    storage.write_raw([raw])
-
-    listings = Replayer(
-        storage=storage,
-        normalizer_version="norm-trim",
-        scope=Scope("dubizzle", "used", "mercedes-benz"),
-    ).replay()
-
-    assert listings[0].trim == "300"
-    assert listings[0].trim_source == "derived_title"
-    assert storage.raw[0].extracted_fields == {"uuid": hit["uuid"], "trim": None}
-
-
-def test_replay_does_not_overwrite_existing_structured_trim():
-    hit = _hit("Mercedes-Benz E 300 AMG")
-    extracted = _extract(
-        _hit("Mercedes-Benz E 300 AMG", structured_trim="Exclusive")
-    ).extracted_fields
-    raw = RawListing(
-        marketplace="dubizzle",
-        marketplace_listing_id="listing-1",
-        uuid=hit["uuid"],
-        raw_payload=hit,
-        extracted_fields=extracted,
-        fetched_at=datetime(2026, 7, 4, tzinfo=timezone.utc),
-        scrape_run_id="run-old",
-        condition="used",
-        make_slug="mercedes-benz",
-    )
-    storage = InMemoryStorageAdapter()
-    storage.write_raw([raw])
-
-    listings = Replayer(
-        storage=storage,
-        normalizer_version="norm-trim",
-        scope=Scope("dubizzle", "used", "mercedes-benz"),
-    ).replay()
-
-    assert listings[0].trim == "exclusive"
-    assert listings[0].trim_source == "structured"

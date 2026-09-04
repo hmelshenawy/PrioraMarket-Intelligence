@@ -5,11 +5,9 @@ from datetime import datetime, timezone
 
 import pytest
 
-from src.common.models import Listing, RawListing, RunReport, RunState, Scope
-from src.db.migrate import apply as apply_migrations
-from src.persistence.batch_bridge import PersistenceBatchBridge
-from src.persistence.service import PersistenceService
-from src.storage.postgres_storage import PostgresStorageAdapter
+from src.migrate import apply as apply_migrations
+from src.models import Listing, RawListing, RunReport, RunState, Scope
+from src.store.postgres import PostgresStore
 
 pytestmark = pytest.mark.skipif(
     os.environ.get("PRIORAMARKET_RUN_DB_TESTS") != "1" or not os.environ.get("DATABASE_URL"),
@@ -25,11 +23,10 @@ def test_full_run_persistence_to_postgresql_counts_reconcile() -> None:
 
     pool = ConnectionPool(database_url, min_size=1, max_size=2)
     try:
-        service = PersistenceService(PostgresStorageAdapter(pool))
         scope = Scope("dubizzle", "used", "toyota")
         started = datetime.now(timezone.utc)
-        bridge = PersistenceBatchBridge(
-            service=service,
+        store = PostgresStore(
+            pool,
             scope=scope,
             config_snapshot={"storage_backend": "postgres"},
             run_started_at=started,
@@ -68,9 +65,9 @@ def test_full_run_persistence_to_postgresql_counts_reconcile() -> None:
             listings_extracted=1,
         )
 
-        bridge.write_raw([raw])
-        bridge.write_listings([listing])
-        bridge.write_report(report)
+        store.write_raw([raw])
+        store.write_listings([listing])
+        store.write_report(report)
 
         with pool.connection() as conn:
             with conn.cursor() as cur:

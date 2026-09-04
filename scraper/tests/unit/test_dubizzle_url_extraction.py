@@ -5,9 +5,9 @@ from datetime import datetime, timezone
 
 from conftest import load_fixture
 
-from src.common.models import Scope
-from src.ingestion.normalizer import Normalizer
-from src.marketplaces.dubizzle.extractor import canonical_listing_url, extract
+from src.fetch.dubizzle_extract import canonical_listing_url, extract
+from src.models import Scope
+from src.normalize.normalizer import Normalizer
 
 
 def _extract(hit):
@@ -58,7 +58,10 @@ def test_url_normalization_accepts_existing_public_uri_without_changing_consumer
     hit = deepcopy(load_fixture("sample_hit.json"))
     hit["uri"] = " /motors/used-cars/toyota/camry/1234567/ "
 
-    assert _extract(hit).extracted_fields["url"] == "https://dubai.dubizzle.com/motors/used-cars/toyota/camry/1234567/"
+    assert (
+        _extract(hit).extracted_fields["url"]
+        == "https://dubai.dubizzle.com/motors/used-cars/toyota/camry/1234567/"
+    )
 
 
 def test_normalizer_carries_canonical_url_to_source_url():

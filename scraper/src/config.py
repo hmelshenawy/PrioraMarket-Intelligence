@@ -10,7 +10,7 @@ on them.
 from __future__ import annotations
 
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -31,7 +31,7 @@ REQUIRED_KEYS = (
 )
 
 DB_REQUIRED_KEYS = ("DATABASE_URL",)
-STORAGE_BACKENDS = {"csv", "in-memory", "memory", "postgres"}
+STORAGE_BACKENDS = {"csv", "postgres"}
 
 
 def _bool(value: str | None, default: bool = True) -> bool:
@@ -59,12 +59,10 @@ class Config:
     normalization_version: str
 
     # Feature flags (operational only; business logic must not depend on them)
-    enable_validation: bool
     enable_canonicalization: bool
-    enable_replay: bool
     enable_structured_logging: bool
     enable_csv_storage: bool
-    storage_backend: str = "csv"
+    storage_backend: str = "postgres"
     database_url: str | None = None
     db_pool_min: int = 1
     db_pool_max: int = 5
@@ -125,7 +123,7 @@ def load_config(env_path: str | os.PathLike | None = None) -> Config:
         except ValueError as exc:
             raise ConfigurationError(f"{key} must be a number, got {raw!r}") from exc
 
-    storage_backend = os.environ.get("STORAGE_BACKEND", "csv").strip().lower() or "csv"
+    storage_backend = os.environ.get("STORAGE_BACKEND", "postgres").strip().lower() or "postgres"
     if storage_backend not in STORAGE_BACKENDS:
         raise ConfigurationError(
             "STORAGE_BACKEND must be one of " + ", ".join(sorted(STORAGE_BACKENDS))
@@ -158,9 +156,7 @@ def load_config(env_path: str | os.PathLike | None = None) -> Config:
         request_timeout_seconds=_get_float("REQUEST_TIMEOUT_SECONDS", 15.0),
         normalization_version=os.environ.get("NORMALIZATION_VERSION", "norm-1"),
         canonicalization_version=os.environ.get("CANONICALIZATION_VERSION", "canonical-key-1"),
-        enable_validation=_bool(os.environ.get("ENABLE_VALIDATION"), True),
         enable_canonicalization=_bool(os.environ.get("ENABLE_CANONICALIZATION"), True),
-        enable_replay=_bool(os.environ.get("ENABLE_REPLAY"), True),
         enable_structured_logging=_bool(os.environ.get("ENABLE_STRUCTURED_LOGGING"), True),
         enable_csv_storage=_bool(os.environ.get("ENABLE_CSV_STORAGE"), True),
         storage_backend=storage_backend,
@@ -169,7 +165,3 @@ def load_config(env_path: str | os.PathLike | None = None) -> Config:
         db_pool_max=db_pool_max,
         db_connect_timeout=_get_int("DB_CONNECT_TIMEOUT", 10),
     )
-
-
-def config_as_dict(cfg: Config) -> dict[str, Any]:
-    return asdict(cfg)

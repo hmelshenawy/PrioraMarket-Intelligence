@@ -13,17 +13,16 @@ from pathlib import Path
 import pytest
 from conftest import load_fixture
 
-from src.common.models import Scope
-from src.config.config import Config
-from src.ingestion.canonicalizer import Canonicalizer
-from src.ingestion.normalizer import Normalizer
-from src.ingestion.pipeline import IngestionPipeline
-from src.marketplaces.adapter_interface import PageMetadata
-from src.marketplaces.dubizzle.extractor import extract
-from src.replay.replayer import Replayer
-from src.reporting.run_report import extended_summary, stop_position
-from src.storage.csv_storage import CsvStorageAdapter
-from src.storage.in_memory import InMemoryStorageAdapter
+from src.config import Config
+from src.fetch.algolia import PageMetadata
+from src.fetch.dubizzle_extract import extract
+from src.models import Scope
+from src.normalize.canonical import CanonicalizationEngine
+from src.normalize.normalizer import Normalizer
+from src.pipeline import IngestionPipeline
+from src.report import extended_summary, stop_position
+from src.store.csv_store import CsvStorageAdapter
+from tests.fakes import InMemoryStorageAdapter
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
@@ -84,9 +83,7 @@ def config(tmp_path):
         rate_limit_max_seconds=0.0,
         request_timeout_seconds=15.0,
         normalization_version="norm-1",
-        enable_validation=True,
         enable_canonicalization=True,
-        enable_replay=True,
         enable_structured_logging=False,
         enable_csv_storage=True,
     )
@@ -99,7 +96,7 @@ def _run(config, storage, pages, run_id):
         adapter,
         storage,
         normalizer=Normalizer("norm-1"),
-        canonicalizer=Canonicalizer(),
+        canonicalizer=CanonicalizationEngine(),
     )
     return pipeline.run(Scope("dubizzle", "used", "toyota"), run_id)
 
@@ -188,7 +185,7 @@ def test_SC_007_no_hardcoded_secrets_or_paths():
     findings = []
     for py in SRC.rglob("*.py"):
         text = py.read_text(encoding="utf-8")
-        for needle in ("WD0PTZ13ZS", "cef139620248f1bc328a00fddc7107a6", "/home/openclaw"):
+        for needle in ('ALGOLIA_APP_ID = "', 'ALGOLIA_API_KEY = "', "/home/openclaw"):
             if needle in text:
                 findings.append(str(py))
     # Hardcoded absolute Path("/...") literals in source.
@@ -221,7 +218,7 @@ def test_SC_008_storage_substitutability(config, tmp_path):
 
 def test_SC_009_second_marketplace_isolated(config):
     """SC-009: a second marketplace only needs a new adapter — no orchestration rewrite."""
-    from src.marketplaces.adapter_interface import MarketplaceAdapter
+    from src.fetch.algolia import MarketplaceAdapter
 
     class _SecondMarketplaceAdapter:
         marketplace_name = "examplemotors"
@@ -261,7 +258,7 @@ def test_SC_009_second_marketplace_isolated(config):
         adapter,
         storage,
         normalizer=Normalizer("norm-1"),
-        canonicalizer=Canonicalizer(),
+        canonicalizer=CanonicalizationEngine(),
     )
     # The SAME pipeline orchestrates a different marketplace with no changes.
     result = pipeline.run(Scope("examplemotors", "used", "toyota"), "run-a9")
@@ -290,19 +287,3 @@ def test_extended_and_optional_metrics_present(config):
         "stop_position",
     ):
         assert key in summary, key
-
-
-def test_replay_round_trip_offline(config):
-    """Replay rebuilds listings offline (FR-065..067, SC-level)."""
-    hit = load_fixture("sample_hit.json")
-    storage = CsvStorageAdapter(config.output_dir, "run-a-rep")
-    _run(config, storage, [([hit], False)], "run-a-rep")
-    replayer = Replayer(
-        storage=storage,
-        normalizer_version="norm-1",
-        scope=Scope("dubizzle", "used", "toyota"),
-    )
-    first = replayer.replay(dataset_version="run-a-rep")
-    second = replayer.replay(dataset_version="run-a-rep")
-    assert len(first) == 1
-    assert first[0].to_record() == second[0].to_record()
