@@ -1,1 +1,0 @@
-"""Storage abstraction and adapters."""
