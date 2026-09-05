@@ -140,9 +140,15 @@ class PostgresStore:
                 self.persist_listing(ctx, raw_by_key[key], listing_by_key[key])
         except Exception:
             # Never leave the run stuck in RUNNING when persistence crashes.
-            run_repo.finalize_run(
-                self, ctx.run_id, report, RunState.FAILED.value, datetime.now(timezone.utc)
-            )
+            # Finalize best-effort on a fresh pooled connection; the original
+            # error always wins.
+            try:
+                self._conn = None
+                run_repo.finalize_run(
+                    self, ctx.run_id, report, RunState.FAILED.value, datetime.now(timezone.utc)
+                )
+            except Exception:
+                logger.exception("could not mark run %s as FAILED", ctx.run_id)
             raise
         unmatched_count = len(self.unmatched_raw_keys) + len(self.unmatched_listing_keys)
         if unmatched_count:
