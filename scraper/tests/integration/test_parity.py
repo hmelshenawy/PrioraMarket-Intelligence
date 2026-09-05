@@ -14,8 +14,7 @@ import pytest
 from conftest import load_fixture
 
 from src.fetch.dubizzle_extract import extract
-from src.models import Scope
-from src.normalize.normalizer import Normalizer
+from src.normalize import canonicalize, canonicalize_field, canonicalize_make, normalize
 
 
 def _prototype_extract(hit: dict) -> dict:
@@ -122,18 +121,19 @@ def test_normalized_listing_identity_matches_prototype():
         scrape_run_id="run-parity",
         fetched_at=datetime.now(timezone.utc),
     )
-    norm = Normalizer("norm-1").normalize(raw, Scope("dubizzle", "used", "toyota"))
+    norm = normalize(raw)
     proto = _prototype_extract(hit)
-    # Listing identity fields equal the prototype projection (pre-canonical).
+    # Listing identity fields equal the prototype projection (categorical
+    # fields arrive canonicalized inside normalize()).
     assert norm.uuid == proto["uuid"]
-    assert norm.make == proto["make"]
-    assert norm.model == proto["model"]
+    assert norm.make == canonicalize_make(proto["make"])
+    assert norm.model == canonicalize(proto["model"])
     assert norm.price == float(proto["price_aed"])
     assert norm.year == proto["year"]
     assert norm.kilometers == float(proto["km"])
-    assert norm.body_type == proto["body_type"]
-    assert norm.fuel_type == proto["fuel"]
-    assert norm.transmission == proto["transmission"]
-    assert norm.regional_spec == proto["specs"]
+    assert norm.body_type == canonicalize_field("body_type", proto["body_type"])
+    assert norm.fuel_type == canonicalize_field("fuel_type", proto["fuel"])
+    assert norm.transmission == canonicalize_field("transmission", proto["transmission"])
+    assert norm.regional_spec == canonicalize_field("regional_spec", proto["specs"])
     assert norm.source_url == proto["url"]
     assert norm.photos_count == proto["photos_count"]

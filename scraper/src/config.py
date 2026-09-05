@@ -31,7 +31,6 @@ REQUIRED_KEYS = (
 )
 
 DB_REQUIRED_KEYS = ("DATABASE_URL",)
-STORAGE_BACKENDS = {"csv", "postgres"}
 
 
 def _bool(value: str | None, default: bool = True) -> bool:
@@ -58,11 +57,7 @@ class Config:
     request_timeout_seconds: float
     normalization_version: str
 
-    # Feature flags (operational only; business logic must not depend on them)
-    enable_canonicalization: bool
     enable_structured_logging: bool
-    enable_csv_storage: bool
-    storage_backend: str = "postgres"
     database_url: str | None = None
     db_pool_min: int = 1
     db_pool_max: int = 5
@@ -70,7 +65,7 @@ class Config:
     canonicalization_version: str = "canonical-key-1"
 
     def snapshot(self) -> dict[str, Any]:
-        """A non-secret snapshot for run metadata / dataset version."""
+        """A non-secret snapshot for run metadata."""
         return {
             "algolia_index": self.algolia_index,
             "hits_per_page": self.hits_per_page,
@@ -83,7 +78,6 @@ class Config:
             "normalization_version": self.normalization_version,
             "canonicalization_version": self.canonicalization_version,
             "output_dir": str(self.output_dir),
-            "storage_backend": self.storage_backend,
         }
 
 
@@ -124,17 +118,16 @@ def load_config(env_path: str | os.PathLike | None = None) -> Config:
             raise ConfigurationError(f"{key} must be a number, got {raw!r}") from exc
 
     storage_backend = os.environ.get("STORAGE_BACKEND", "postgres").strip().lower() or "postgres"
-    if storage_backend not in STORAGE_BACKENDS:
+    if storage_backend != "postgres":
         raise ConfigurationError(
-            "STORAGE_BACKEND must be one of " + ", ".join(sorted(STORAGE_BACKENDS))
+            f"Unsupported STORAGE_BACKEND: {storage_backend} (only postgres is supported)"
         )
 
-    if storage_backend == "postgres":
-        db_missing = [k for k in DB_REQUIRED_KEYS if not os.environ.get(k)]
-        if db_missing:
-            raise ConfigurationError(
-                "Missing required PostgreSQL configuration values: " + ", ".join(db_missing)
-            )
+    db_missing = [k for k in DB_REQUIRED_KEYS if not os.environ.get(k)]
+    if db_missing:
+        raise ConfigurationError(
+            "Missing required PostgreSQL configuration values: " + ", ".join(db_missing)
+        )
 
     db_pool_min = _get_int("DB_POOL_MIN", 1)
     db_pool_max = _get_int("DB_POOL_MAX", 5)
@@ -156,10 +149,7 @@ def load_config(env_path: str | os.PathLike | None = None) -> Config:
         request_timeout_seconds=_get_float("REQUEST_TIMEOUT_SECONDS", 15.0),
         normalization_version=os.environ.get("NORMALIZATION_VERSION", "norm-1"),
         canonicalization_version=os.environ.get("CANONICALIZATION_VERSION", "canonical-key-1"),
-        enable_canonicalization=_bool(os.environ.get("ENABLE_CANONICALIZATION"), True),
         enable_structured_logging=_bool(os.environ.get("ENABLE_STRUCTURED_LOGGING"), True),
-        enable_csv_storage=_bool(os.environ.get("ENABLE_CSV_STORAGE"), True),
-        storage_backend=storage_backend,
         database_url=os.environ.get("DATABASE_URL"),
         db_pool_min=db_pool_min,
         db_pool_max=db_pool_max,

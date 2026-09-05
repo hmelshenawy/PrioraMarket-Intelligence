@@ -1,19 +1,23 @@
-"""Listing persistence: raw capture and current-listing upsert columns.
+"""Listing persistence: raw capture and current-listing upsert SQL.
 
-The column constants here pin the exact ``listing`` table columns the
-NestJS backend reads via Prisma (make/model/trim/year/price/status,
-canonical_hash, normalization_version, last_seen_at, last_seen_run_id,
-first_seen_run_id, current_raw_listing_id) — do not rename or reorder
-without checking the backend.
+Every function takes a psycopg connection and runs exactly one SQL
+statement. The column constants pin the exact ``listing`` table columns
+the NestJS backend reads via Prisma (make/model/trim/year/price/status,
+canonical_hash, normalization_version, last_seen_at,
+current_raw_listing_id) — do not rename or reorder without checking the
+backend.
 """
 
 from __future__ import annotations
 
-from src.hashing import canonical_hash
-from src.models import ListingRow, RawListing, RunContext
+from datetime import datetime, timezone
+
+from psycopg.types.json import Jsonb
+
+from src.hashing import canonical_hash, canonical_payload
+from src.models import Listing, RawListing
 
 LISTING_INSERT_COLUMNS = (
-    "marketplace_source_id",
     "source",
     "uuid",
     "title",
@@ -37,8 +41,6 @@ LISTING_INSERT_COLUMNS = (
     "status",
     "first_seen_at",
     "last_seen_at",
-    "first_seen_run_id",
-    "last_seen_run_id",
     "current_raw_listing_id",
     "canonical_hash",
     "normalization_version",
@@ -66,137 +68,108 @@ LISTING_UPDATE_COLUMNS = (
     "url",
     "status",
     "last_seen_at",
-    "last_seen_run_id",
     "current_raw_listing_id",
     "canonical_hash",
     "normalization_version",
     "canonicalization_version",
 )
 
-# Canonical payload key per listing column (None -> column name itself).
-_PAYLOAD_KEY = {"mileage": "kilometers", "url": "source_url"}
-_ROW_FIELDS = frozenset(
-    {
-        "marketplace_source_id",
-        "source",
-        "uuid",
-        "status",
-        "first_seen_at",
-        "last_seen_at",
-        "first_seen_run_id",
-        "last_seen_run_id",
-        "current_raw_listing_id",
-        "canonical_hash",
-        "normalization_version",
-    }
-)
+# Listing attribute per SQL column when the names differ (None -> always NULL).
+_COLUMN_ATTR = {
+    "title": None,
+    "mileage": "kilometers",
+    "url": "source_url",
+}
 
 
-def insert_raw_listing(store, raw: RawListing, ctx: RunContext) -> int:
-    row = store._fetchone(
-        """
-        INSERT INTO raw_listing (
-            marketplace_source_id, ingestion_run_id, source, uuid, raw_payload,
-            raw_hash, adapter_version, marketplace_schema_version,
-            marketplace_payload_version, extracted_at
+def insert_raw_listing(conn, raw: RawListing) -> int:
+    """Insert the raw payload exactly as received; return its row id."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO raw_listing (
+                source, uuid, raw_payload, raw_hash, adapter_version,
+                marketplace_schema_version, marketplace_payload_version, extracted_at
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+            """,
+            (
+                raw.marketplace,
+                raw.uuid,
+                Jsonb(raw.raw_payload),
+                canonical_hash(raw.raw_payload),
+                raw.extracted_fields.get("adapter_version", "unknown"),
+                raw.extracted_fields.get("marketplace_schema_version"),
+                raw.extracted_fields.get("marketplace_payload_version"),
+                raw.fetched_at,
+            ),
         )
-        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        RETURNING id
-        """,
-        (
-            ctx.marketplace_source_id,
-            ctx.run_id,
-            raw.marketplace,
-            raw.uuid,
-            store._json(raw.raw_payload),
-            canonical_hash(raw.raw_payload),
-            raw.extracted_fields.get("adapter_version", "unknown"),
-            raw.extracted_fields.get("marketplace_schema_version"),
-            raw.extracted_fields.get("marketplace_payload_version"),
-            raw.fetched_at,
-        ),
-    )
-    return int(row["id"])
+        return int(cur.fetchone()["id"])
 
 
-def find_by_source_uuid(store, source: str, uuid: str) -> ListingRow | None:
-    row = store._fetchone(
-        """
-        SELECT *
-        FROM listing
-        WHERE source = %s AND uuid = %s
-        """,
-        (source, uuid),
-    )
-    if row is None:
-        return None
-    return _listing_row(row)
+def find_by_source_uuid(conn, source: str, uuid: str) -> dict | None:
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT id, first_seen_at
+            FROM listing
+            WHERE source = %s AND uuid = %s
+            """,
+            (source, uuid),
+        )
+        return cur.fetchone()
 
 
-def insert_listing(store, row: ListingRow) -> int:
+def insert_listing(conn, listing: Listing, *, raw_id: int) -> int:
+    """Insert a new current listing row; first/last seen = observation time."""
+    values = _column_values(listing, raw_id=raw_id)
+    seen_at = listing.fetched_at or datetime.now(timezone.utc)
+    values["first_seen_at"] = seen_at
+    values["last_seen_at"] = seen_at
     columns = ", ".join(LISTING_INSERT_COLUMNS)
     placeholders = ", ".join(["%s"] * len(LISTING_INSERT_COLUMNS))
-    inserted = store._fetchone(
-        f"INSERT INTO listing ({columns}) VALUES ({placeholders}) RETURNING id",
-        _listing_values(LISTING_INSERT_COLUMNS, row),
-    )
-    return int(inserted["id"])
+    with conn.cursor() as cur:
+        cur.execute(
+            f"INSERT INTO listing ({columns}) VALUES ({placeholders}) RETURNING id",
+            tuple(values[column] for column in LISTING_INSERT_COLUMNS),
+        )
+        return int(cur.fetchone()["id"])
 
 
-def update_listing(store, listing_id: int, row: ListingRow) -> None:
+def update_listing(conn, listing_id: int, listing: Listing, *, raw_id: int) -> None:
+    """Refresh the current listing row from a new observation.
+
+    first_seen_at is intentionally absent: the original first-seen
+    provenance is preserved on update.
+    """
+    values = _column_values(listing, raw_id=raw_id)
+    values["last_seen_at"] = datetime.now(timezone.utc)
     assignments = ", ".join(f"{column} = %s" for column in LISTING_UPDATE_COLUMNS)
-    store._execute(
-        f"UPDATE listing SET {assignments}, updated_at = now() WHERE id = %s",
-        (*_listing_values(LISTING_UPDATE_COLUMNS, row), listing_id),
-    )
+    with conn.cursor() as cur:
+        cur.execute(
+            f"UPDATE listing SET {assignments}, updated_at = now() WHERE id = %s",
+            (*(values[column] for column in LISTING_UPDATE_COLUMNS), listing_id),
+        )
 
 
-def _listing_values(columns, row: ListingRow) -> tuple:
-    payload = row.canonical_payload
-    values = []
-    for column in columns:
-        if column in _ROW_FIELDS:
-            values.append(getattr(row, column))
+def _column_values(listing: Listing, *, raw_id: int) -> dict:
+    """Map one Listing to the pinned SQL column values."""
+    values = {}
+    for column in LISTING_INSERT_COLUMNS:
+        if column in ("first_seen_at", "last_seen_at"):
+            values[column] = None  # supplied by the caller
+        elif column == "source":
+            values[column] = listing.marketplace
+        elif column == "uuid":
+            values[column] = listing.uuid
+        elif column == "status":
+            values[column] = "ACTIVE"
+        elif column == "current_raw_listing_id":
+            values[column] = raw_id
+        elif column == "canonical_hash":
+            values[column] = canonical_hash(canonical_payload(listing))
         else:
-            values.append(payload.get(_PAYLOAD_KEY.get(column, column)))
-    return tuple(values)
-
-
-def _listing_row(row) -> ListingRow:
-    payload = {
-        "title": row.get("title"),
-        "make": row.get("make"),
-        "model": row.get("model"),
-        "trim": row.get("trim"),
-        "year": row.get("year"),
-        "price": row.get("price"),
-        "kilometers": row.get("mileage"),
-        "condition": row.get("condition"),
-        "fuel_type": row.get("fuel_type"),
-        "transmission": row.get("transmission"),
-        "regional_spec": row.get("regional_spec"),
-        "body_type": row.get("body_type"),
-        "seller_type": row.get("seller_type"),
-        "vehicle_condition": row.get("vehicle_condition"),
-        "specs": row.get("specs"),
-        "color": row.get("color"),
-        "location": row.get("location"),
-        "source_url": row.get("url"),
-        "normalization_version": row.get("normalization_version"),
-        "canonicalization_version": row.get("canonicalization_version"),
-    }
-    return ListingRow(
-        id=row["id"],
-        marketplace_source_id=row["marketplace_source_id"],
-        source=row["source"],
-        uuid=row["uuid"],
-        canonical_payload=payload,
-        canonical_hash=row["canonical_hash"],
-        normalization_version=row["normalization_version"],
-        first_seen_at=row["first_seen_at"],
-        last_seen_at=row["last_seen_at"],
-        first_seen_run_id=row["first_seen_run_id"],
-        last_seen_run_id=row["last_seen_run_id"],
-        current_raw_listing_id=row["current_raw_listing_id"],
-        status=row["status"],
-    )
+            attr = _COLUMN_ATTR.get(column, column)
+            values[column] = getattr(listing, attr) if attr else None
+    return values

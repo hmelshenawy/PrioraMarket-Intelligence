@@ -1,29 +1,28 @@
 from __future__ import annotations
 
 from src.backfill import CanonicalBackfillService
-from src.models import BackfillListingCandidate
-from tests.fakes import InMemoryStorageAdapter
+from tests.integration.backfill_store_stub import BackfillStoreStub
 
 
-class FailingStorage(InMemoryStorageAdapter):
-    def update_listing_backfill_payload(self, *args, **kwargs) -> None:
-        if args[0] == 2:
+class FailingStore(BackfillStoreStub):
+    def _apply_update(self, params) -> None:
+        if params["listing_id"] == 2:
             raise RuntimeError("boom")
-        super().update_listing_backfill_payload(*args, **kwargs)
+        super()._apply_update(params)
 
 
-def _candidate(id_: int) -> BackfillListingCandidate:
-    return BackfillListingCandidate(
-        id=id_,
-        source="dubizzle",
-        uuid=f"uuid-{id_}",
-        canonical_payload={"make": "Mercedes Benz", "model": f"C {id_}"},
-    )
+def _candidate(id_: int) -> dict:
+    return {
+        "id": id_,
+        "source": "dubizzle",
+        "uuid": f"uuid-{id_}",
+        "make": "Mercedes Benz",
+        "model": f"C {id_}",
+    }
 
 
 def test_canonical_backfill_reports_partial_failures_and_can_resume() -> None:
-    storage = FailingStorage()
-    storage.backfill_candidates.extend([_candidate(1), _candidate(2), _candidate(3)])
+    storage = FailingStore([_candidate(1), _candidate(2), _candidate(3)])
 
     first = CanonicalBackfillService(storage).run(dry_run=False, batch_size=2)
     second = CanonicalBackfillService(storage).run(

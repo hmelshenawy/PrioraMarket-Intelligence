@@ -3,10 +3,12 @@ from __future__ import annotations
 import os
 from datetime import datetime, timezone
 
+import psycopg
 import pytest
+from psycopg.rows import dict_row
 
 from src.migrate import apply as apply_migrations
-from src.models import Listing, RawListing, RunReport, RunState, Scope
+from src.models import Listing, RawListing
 from src.store.postgres import PostgresStore
 
 pytestmark = pytest.mark.skipif(
@@ -15,165 +17,104 @@ pytestmark = pytest.mark.skipif(
 )
 
 
-def test_full_run_persistence_to_postgresql_counts_reconcile() -> None:
+def _pair(uuid, fetched_at):
+    raw = RawListing(
+        marketplace="dubizzle",
+        marketplace_listing_id=uuid,
+        uuid=uuid,
+        raw_payload={"id": uuid, "price": 10000},
+        extracted_fields={"adapter_version": "test"},
+        fetched_at=fetched_at,
+        scrape_run_id="integration-run",
+        condition="used",
+        make_slug="toyota",
+    )
+    listing = Listing(
+        uuid=uuid,
+        marketplace="dubizzle",
+        marketplace_listing_id=uuid,
+        make="toyota",
+        model="camry",
+        price=10000,
+        normalization_version="norm-1",
+    )
+    return raw, listing
+
+
+def test_save_listing_inserts_then_updates_preserving_first_seen() -> None:
     database_url = os.environ["DATABASE_URL"]
     apply_migrations(database_url)
 
-    from psycopg_pool import ConnectionPool
-
-    pool = ConnectionPool(database_url, min_size=1, max_size=2)
+    conn = psycopg.connect(database_url, row_factory=dict_row)
     try:
-        scope = Scope("dubizzle", "used", "toyota")
-        started = datetime.now(timezone.utc)
-        store = PostgresStore(
-            pool,
-            scope=scope,
-            config_snapshot={"storage_backend": "postgres"},
-            run_started_at=started,
-            marketplace_source_code="dubizzle_uae",
-        )
-        uuid = f"integration-{started.timestamp()}"
-        raw = RawListing(
-            marketplace="dubizzle",
-            marketplace_listing_id=uuid,
-            uuid=uuid,
-            raw_payload={"id": uuid, "price": 10000},
-            extracted_fields={"adapter_version": "test"},
-            fetched_at=started,
-            scrape_run_id="integration-run",
-            condition="used",
-            make_slug="toyota",
-        )
-        listing = Listing(
-            uuid=uuid,
-            marketplace="dubizzle",
-            marketplace_listing_id=uuid,
-            make="Toyota",
-            model="Camry",
-            price=10000,
-            normalization_version="norm-1",
-        )
-        report = RunReport(
-            run_id="integration-run",
-            state=RunState.COMPLETED,
-            marketplace="dubizzle",
-            condition="used",
-            make="toyota",
-            dataset_version=None,
-            normalization_version="norm-1",
-            pages_processed=1,
-            listings_extracted=1,
-        )
+        store = PostgresStore(conn)
+        uuid = f"integration-{datetime.now(timezone.utc).timestamp()}"
+        raw, listing = _pair(uuid, datetime.now(timezone.utc))
 
-        store.write_raw([raw])
-        store.write_listings([listing])
-        store.write_report(report)
+        # New listing is created; data is only durable once the caller commits.
+        assert store.save_listing(raw, listing) == "created"
+        conn.commit()
 
-        with pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT COUNT(*) FROM raw_listing WHERE uuid = %s", (uuid,))
-                assert cur.fetchone()[0] == 1
-                cur.execute("SELECT COUNT(*) FROM listing WHERE uuid = %s", (uuid,))
-                assert cur.fetchone()[0] == 1
-                cur.execute(
-                    """
-                    SELECT report_json->>'run_id', report_json->>'state'
-                    FROM ingestion_run
-                    WHERE id = (SELECT ingestion_run_id FROM raw_listing WHERE uuid = %s)
-                    """,
-                    (uuid,),
-                )
-                report_run_id, report_state = cur.fetchone()
-                assert report_run_id == "integration-run"
-                assert report_state == "COMPLETED"
-                cur.execute(
-                    """
-                    SELECT COUNT(*)
-                    FROM listing_snapshot
-                    WHERE raw_listing_id IN (SELECT id FROM raw_listing WHERE uuid = %s)
-                    """,
-                    (uuid,),
-                )
-                assert cur.fetchone()[0] == 0
-    finally:
-        pool.close()
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM raw_listing WHERE uuid = %s", (uuid,))
+            assert cur.fetchone()["count"] == 1
+            cur.execute("SELECT COUNT(*) FROM listing WHERE uuid = %s", (uuid,))
+            assert cur.fetchone()["count"] == 1
 
+        # Second save of the same listing is an UPDATE, first_seen preserved.
+        assert store.save_listing(raw, listing) == "updated"
+        conn.commit()
 
-def test_persist_run_marks_run_failed_when_listing_persistence_crashes() -> None:
-    database_url = os.environ["DATABASE_URL"]
-    apply_migrations(database_url)
-
-    from psycopg_pool import ConnectionPool
-
-    pool = ConnectionPool(database_url, min_size=1, max_size=2)
-    try:
-        scope = Scope("dubizzle", "used", "toyota")
-        started = datetime.now(timezone.utc)
-        store = PostgresStore(
-            pool,
-            scope=scope,
-            config_snapshot={"storage_backend": "postgres"},
-            run_started_at=started,
-            marketplace_source_code="dubizzle_uae",
-        )
-        raw = RawListing(
-            marketplace="dubizzle",
-            marketplace_listing_id="crash-run",
-            uuid="crash-run",
-            raw_payload={"id": "crash-run"},
-            extracted_fields={},
-            fetched_at=started,
-            scrape_run_id="integration-run-crash",
-            condition="used",
-            make_slug="toyota",
-        )
-        listing = Listing(
-            uuid="crash-run",
-            marketplace="dubizzle",
-            marketplace_listing_id="crash-run",
-            make="Toyota",
-            model="Camry",
-            price=10000,
-            normalization_version="norm-1",
-        )
-        store.write_raw([raw])
-        store.write_listings([listing])
-
-        original_begin_run = store.begin_run
-        run_ids = []
-
-        def _capture_run_id(scope, config_snapshot, run_started_at, marketplace_source_code):
-            ctx = original_begin_run(
-                scope, config_snapshot, run_started_at, marketplace_source_code
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM raw_listing WHERE uuid = %s", (uuid,))
+            assert cur.fetchone()["count"] == 2  # raw payloads append per observation
+            cur.execute(
+                """
+                SELECT first_seen_at = last_seen_at AS same_ts, status
+                FROM listing WHERE uuid = %s
+                """,
+                (uuid,),
             )
-            run_ids.append(ctx.run_id)
-            return ctx
+            row = cur.fetchone()
+            first_equals_last, status = row["same_ts"], row["status"]
+            assert first_equals_last is False
+            assert status == "ACTIVE"
+    finally:
+        conn.close()
 
-        def _crash(ctx, raw, listing):
-            raise RuntimeError("simulated persistence crash")
 
-        store.begin_run = _capture_run_id
-        store.persist_listing = _crash
-        report = RunReport(
-            run_id="integration-run-crash",
-            state=RunState.COMPLETED,
-            marketplace="dubizzle",
-            condition="used",
-            make="toyota",
-            dataset_version=None,
-            normalization_version="norm-1",
-            pages_processed=1,
-            listings_extracted=1,
+def test_failed_save_is_rolled_back_by_the_caller() -> None:
+    database_url = os.environ["DATABASE_URL"]
+    apply_migrations(database_url)
+
+    conn = psycopg.connect(database_url, row_factory=dict_row)
+    try:
+        store = PostgresStore(conn)
+        uuid = f"rollback-{datetime.now(timezone.utc).timestamp()}"
+        # uuid is NOT NULL in raw_listing — the save must fail.
+        raw, listing = _pair(uuid, datetime.now(timezone.utc))
+        bad_raw = RawListing(
+            marketplace=raw.marketplace,
+            marketplace_listing_id=None,
+            uuid=None,
+            raw_payload=raw.raw_payload,
+            extracted_fields=raw.extracted_fields,
+            fetched_at=raw.fetched_at,
+            scrape_run_id=raw.scrape_run_id,
+            condition=raw.condition,
+            make_slug=raw.make_slug,
         )
 
-        with pytest.raises(RuntimeError, match="simulated persistence crash"):
-            store.write_report(report)
+        with pytest.raises(psycopg.errors.NotNullViolation):
+            store.save_listing(bad_raw, listing)
+        conn.rollback()
 
-        with pool.connection() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT status FROM ingestion_run WHERE id = %s", (run_ids[0],))
-                assert cur.fetchone()[0] == "FAILED"
-                cur.execute("DELETE FROM ingestion_run WHERE id = %s", (run_ids[0],))
-            conn.commit()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) FROM listing WHERE source = 'dubizzle' AND uuid = %s", (uuid,)
+            )
+            assert cur.fetchone()["count"] == 0
+            cur.execute("SELECT COUNT(*) FROM raw_listing WHERE uuid IS NULL")
+            assert cur.fetchone()["count"] == 0
     finally:
-        pool.close()
+        conn.close()

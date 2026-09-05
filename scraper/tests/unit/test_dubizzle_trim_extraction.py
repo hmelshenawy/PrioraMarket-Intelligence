@@ -7,8 +7,7 @@ from conftest import load_fixture
 
 from src.fetch.dubizzle_extract import derive_trim_from_title, extract
 from src.hashing import canonical_payload
-from src.models import Scope
-from src.normalize.normalizer import Normalizer
+from src.normalize import normalize
 
 
 def _hit(name: str, *, structured_trim=None, year=2021, price=95000, km=45000):
@@ -80,7 +79,7 @@ def test_avoids_false_positives_from_year_mileage_price_and_phone_numbers():
 
 def test_normalized_listing_promotes_trim_into_canonical_payload():
     raw = _extract(_hit("Mercedes-Benz GLE 450 4Matic"))
-    listing = Normalizer("norm-trim").normalize(raw, Scope("dubizzle", "used", "mercedes-benz"))
+    listing = normalize(raw)
 
     assert listing.trim == "450"
     assert listing.trim_source == "derived_title"

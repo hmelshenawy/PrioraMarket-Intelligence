@@ -9,7 +9,7 @@ from typing import Any
 
 from src.hashing import canonical_hash
 from src.models import VehicleReferenceCatalogRow
-from src.normalize.canonical import canonical_key
+from src.normalize import canonicalize
 from src.store.catalog_validation import validate_vehicle_reference_catalog_row
 
 REQUIRED_COLUMNS = (
@@ -56,8 +56,8 @@ def parse_vehicle_reference_catalog_row(
 ) -> VehicleReferenceCatalogRow:
     row_payload = {key: (raw.get(key) or "").strip() for key in REQUIRED_COLUMNS}
     aliases = _parse_aliases(row_payload["aliases"])
-    make_key = canonical_key(row_payload["make_key"])
-    model_key = canonical_key(row_payload["model_key"])
+    make_key = canonicalize(row_payload["make_key"])
+    model_key = canonicalize(row_payload["model_key"])
     if make_key is None or model_key is None:
         raise VehicleReferenceCatalogCsvError("make_key and model_key are required")
 

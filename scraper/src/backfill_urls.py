@@ -13,13 +13,11 @@ import os
 from urllib.parse import quote
 
 from dotenv import load_dotenv
-from psycopg.rows import dict_row
 
 from src.fetch.dubizzle_extract import extract
 from src.hashing import canonical_hash, canonical_payload
-from src.models import RawListing, Scope
-from src.normalize.canonical import CanonicalizationEngine
-from src.normalize.normalizer import Normalizer
+from src.models import RawListing
+from src.normalize import normalize
 
 
 def _safe_dsn(dsn: str) -> str:
@@ -33,8 +31,18 @@ def _safe_dsn(dsn: str) -> str:
     return f"{scheme}://{quote(user, safe='')}:{quote(password, safe='')}@{hostpath}"
 
 
+def _condition_and_make(raw_payload: dict) -> tuple[str, str | None]:
+    """Derive condition and make slug from the preserved category paths."""
+    paths = (raw_payload.get("category_v2") or {}).get("slug_paths") or []
+    motors = [p.strip("/") for p in paths if isinstance(p, str) and p.count("/") == 2]
+    condition = next((p.split("/")[1].split("-")[0] for p in motors), "used")
+    make = next((p.split("/")[2] for p in motors), None)
+    return condition, make
+
+
 def _raw_listing(row) -> RawListing:
     raw_payload = row["raw_payload"] or {}
+    condition, make = _condition_and_make(raw_payload)
     return RawListing(
         marketplace=row["source"],
         marketplace_listing_id=(
@@ -44,9 +52,9 @@ def _raw_listing(row) -> RawListing:
         raw_payload=raw_payload,
         extracted_fields={},
         fetched_at=row["extracted_at"],
-        scrape_run_id=str(row["ingestion_run_id"]),
-        condition=row["condition"],
-        make_slug=row["make"],
+        scrape_run_id="url-backfill",
+        condition=condition,
+        make_slug=make,
     )
 
 
@@ -56,18 +64,16 @@ def run(*, env: str | None, apply: bool, limit: int | None, normalization_versio
     if not database_url:
         raise SystemExit("DATABASE_URL is required")
 
-    from src.store.pool import DatabaseSettings, create_pool
+    import psycopg
+    from psycopg.rows import dict_row
 
-    pool = create_pool(
-        DatabaseSettings(database_url=_safe_dsn(database_url), pool_min=1, pool_max=1)
-    )
-    canonicalizer = CanonicalizationEngine()
+    conn = psycopg.connect(_safe_dsn(database_url), row_factory=dict_row)
     updates = []
     skipped = 0
     samples = []
 
-    with pool.connection() as conn:
-        with conn.cursor(row_factory=dict_row) as cur:
+    try:
+        with conn.cursor() as cur:
             cur.execute(
                 """
                 SELECT
@@ -76,13 +82,9 @@ def run(*, env: str | None, apply: bool, limit: int | None, normalization_versio
                     l.url AS old_url,
                     rl.source,
                     rl.raw_payload,
-                    rl.extracted_at,
-                    rl.ingestion_run_id,
-                    r.condition,
-                    r.make
+                    rl.extracted_at
                 FROM listing l
                 JOIN raw_listing rl ON rl.id = l.current_raw_listing_id
-                JOIN ingestion_run r ON r.id = rl.ingestion_run_id
                 WHERE l.source = 'dubizzle'
                   AND (l.url IS NULL OR l.url LIKE %s)
                 ORDER BY l.id
@@ -104,11 +106,8 @@ def run(*, env: str | None, apply: bool, limit: int | None, normalization_versio
                 if not new_url:
                     skipped += 1
                     continue
-                listing = Normalizer(normalization_version).normalize(
-                    enriched,
-                    Scope(raw.marketplace, raw.condition, raw.make_slug or "unknown"),
-                )
-                listing = canonicalizer.canonicalize_listing(listing)
+                listing = normalize(enriched)
+                listing.normalization_version = normalization_version
                 payload = canonical_payload(listing)
                 updates.append(
                     (
@@ -141,6 +140,11 @@ def run(*, env: str | None, apply: bool, limit: int | None, normalization_versio
                 conn.commit()
             else:
                 conn.rollback()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
     print(f"mode={'apply' if apply else 'dry-run'}")
     print(f"candidates={len(updates)}")

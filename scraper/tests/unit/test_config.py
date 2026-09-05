@@ -27,9 +27,7 @@ def _env(monkeypatch, **overrides):
         "REQUEST_TIMEOUT_SECONDS",
         "NORMALIZATION_VERSION",
         "CANONICALIZATION_VERSION",
-        "ENABLE_CANONICALIZATION",
         "ENABLE_STRUCTURED_LOGGING",
-        "ENABLE_CSV_STORAGE",
     ):
         monkeypatch.delenv(leaked, raising=False)
     base = {
@@ -38,6 +36,7 @@ def _env(monkeypatch, **overrides):
         "ALGOLIA_INDEX": "idx",
         "ALGOLIA_URL": "https://example/queries",
         "OUTPUT_DIR": "./data/out",
+        "DATABASE_URL": "postgresql://user:pass@localhost/db",
     }
     base.update(overrides)
     for key, value in base.items():
@@ -46,51 +45,37 @@ def _env(monkeypatch, **overrides):
     monkeypatch.setattr("src.config.load_dotenv", lambda *a, **k: False)
 
 
-def test_postgres_is_the_default_backend_and_requires_database_url(monkeypatch):
+def test_missing_database_url_is_rejected(monkeypatch):
     from src.config import ConfigurationError, load_config
 
     _env(monkeypatch)
+    monkeypatch.delenv("DATABASE_URL")
     with pytest.raises(ConfigurationError, match="DATABASE_URL"):
         load_config()
-
-
-def test_csv_backend_does_not_require_database_url(monkeypatch):
-    from src.config import load_config
-
-    _env(monkeypatch, STORAGE_BACKEND="csv")
-    config = load_config()
-    assert config.storage_backend == "csv"
-    assert config.database_url is None
 
 
 def test_unknown_backend_is_rejected(monkeypatch):
     from src.config import ConfigurationError, load_config
 
-    _env(monkeypatch, STORAGE_BACKEND="memory")
+    _env(monkeypatch, STORAGE_BACKEND="csv")
     with pytest.raises(ConfigurationError, match="STORAGE_BACKEND"):
         load_config()
-
-
-def test_supported_backends_are_csv_and_postgres_only():
-    from src.config import STORAGE_BACKENDS
-
-    assert STORAGE_BACKENDS == {"csv", "postgres"}
 
 
 def test_snapshot_excludes_secrets(monkeypatch):
     from src.config import load_config
 
-    _env(monkeypatch, STORAGE_BACKEND="csv")
     snap = load_config().snapshot()
     assert "algolia_api_key" not in snap
     assert "algolia_app_id" not in snap
     assert "database_url" not in snap
-    assert snap["storage_backend"] == "csv"
+    assert snap["normalization_version"] == "norm-1"
+    assert snap["canonicalization_version"] == "canonical-key-1"
 
 
 def test_invalid_pool_range_is_rejected(monkeypatch):
     from src.config import ConfigurationError, load_config
 
-    _env(monkeypatch, STORAGE_BACKEND="csv", DB_POOL_MIN="5", DB_POOL_MAX="1")
+    _env(monkeypatch, DB_POOL_MIN="5", DB_POOL_MAX="1")
     with pytest.raises(ConfigurationError, match="pool range"):
         load_config()

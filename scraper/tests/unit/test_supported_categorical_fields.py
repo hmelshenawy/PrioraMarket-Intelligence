@@ -1,40 +1,76 @@
 from __future__ import annotations
 
-from src.models import Listing
-from src.normalize.canonical import CanonicalizationEngine
+from datetime import datetime, timezone
+
+from src.models import RawListing
+from src.normalize import normalize
+
+
+def _raw(**fields) -> RawListing:
+    extracted = {
+        "uuid": "1",
+        "make": "Mercedes-Benz",
+        "model": "E53 AMG",
+        "trim": "AMG Night Package",
+        "fuel": "Gasoline",
+        "transmission": "Auto",
+        "specs": "GCC Specs",
+        "body_type": "Crossover SUV",
+        "seller_type": "Dealer",
+        "color": "Obsidian Black Metallic",
+    }
+    extracted.update(fields)
+    return RawListing(
+        marketplace="dubizzle",
+        marketplace_listing_id="1",
+        uuid="1",
+        raw_payload={},
+        extracted_fields=extracted,
+        fetched_at=datetime.now(timezone.utc),
+        scrape_run_id="run-1",
+        condition="Used",
+        make_slug="mercedes-benz",
+    )
 
 
 def test_supported_categorical_fields_are_canonicalized_to_keys() -> None:
-    listing = Listing(
-        uuid="1",
-        marketplace="dubizzle",
-        marketplace_listing_id="1",
-        make="Mercedes-Benz",
-        model="E53 AMG",
-        trim="AMG Night Package",
-        condition="Used",
-        fuel_type="Gasoline",
-        transmission="Auto",
-        regional_spec="GCC Specs",
-        body_type="Crossover SUV",
-        seller_type="Dealer",
-        vehicle_condition="Used",
-        specs="GCC Specs",
-        color="Obsidian Black Metallic",
+    listing = normalize(_raw())
+
+    assert listing.make == "mercedesbenz"
+    assert listing.model == "e53amg"
+    assert listing.trim == "amgnightpackage"
+    assert listing.condition == "used"
+    assert listing.fuel_type == "petrol"
+    assert listing.transmission == "automatic"
+    assert listing.regional_spec == "gcc"
+    assert listing.body_type == "suv"
+    assert listing.seller_type == "dealer"
+    assert listing.vehicle_condition == "used"
+    assert listing.specs == "gccspecs"
+    assert listing.color == "obsidianblackmetallic"
+    assert listing.canonicalization_version == "canonical-key-1"
+
+
+def test_normalize_maps_raw_identity_and_numbers() -> None:
+    raw = _raw(price_aed="45000", year="2022", km="12,500")
+    listing = normalize(raw)
+
+    assert listing.uuid == "1"
+    assert listing.marketplace == "dubizzle"
+    assert listing.price == 45000.0
+    assert listing.year == 2022
+    assert listing.kilometers is None  # non-numeric km string is dropped
+    assert listing.currency == "AED"
+
+
+def test_normalize_uses_catalog_for_model_resolution() -> None:
+    class _Row:
+        model_key = "eclass"
+        aliases = {"model": ["E53 AMG"]}
+
+    listing = normalize(
+        _raw(model="E53 AMG"),
+        catalog=lambda make, model: [_Row()],
     )
 
-    canonical = CanonicalizationEngine().canonicalize_listing(listing)
-
-    assert canonical.make == "mercedesbenz"
-    assert canonical.model == "e53amg"
-    assert canonical.trim == "amgnightpackage"
-    assert canonical.condition == "used"
-    assert canonical.fuel_type == "petrol"
-    assert canonical.transmission == "automatic"
-    assert canonical.regional_spec == "gcc"
-    assert canonical.body_type == "suv"
-    assert canonical.seller_type == "dealer"
-    assert canonical.vehicle_condition == "used"
-    assert canonical.specs == "gccspecs"
-    assert canonical.color == "obsidianblackmetallic"
-    assert canonical.canonicalization_version == "canonical-key-1"
+    assert listing.model == "eclass"

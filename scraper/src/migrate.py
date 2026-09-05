@@ -42,12 +42,20 @@ def status(database_url: str) -> None:
 
 
 def sync_catalog(database_url: str, path: Path) -> None:
-    from src.store.catalog_sync import synchronize_vehicle_reference_catalog
-    from src.store.pool import DatabaseSettings, create_pool
-    from src.store.postgres import PostgresStore
+    import psycopg
+    from psycopg.rows import dict_row
 
-    pool = create_pool(DatabaseSettings(database_url=database_url))
-    report = synchronize_vehicle_reference_catalog(PostgresStore(pool), path)
+    from src.store.catalog_sync import synchronize_vehicle_reference_catalog
+
+    conn = psycopg.connect(database_url, row_factory=dict_row)
+    try:
+        report = synchronize_vehicle_reference_catalog(conn, path)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     print(
         "Vehicle Reference Catalog sync: "
         f"inserted={report.inserted}, updated={report.updated}, "

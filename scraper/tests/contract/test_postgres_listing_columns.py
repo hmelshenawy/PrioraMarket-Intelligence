@@ -2,9 +2,9 @@
 
 The backend's Prisma models read canonical columns (make/model/trim/year/
 price/status, canonical_hash, normalization_version) and freshness
-metadata (last_seen_at, last_seen_run_id, first_seen_run_id,
-current_raw_listing_id) from the scraper-owned ``listing`` table. These
-tests fail if an insert or update stops populating any of them.
+metadata (last_seen_at, current_raw_listing_id) from the scraper-owned
+``listing`` table. These tests fail if an insert or update stops
+populating any of them.
 """
 
 from __future__ import annotations
@@ -22,17 +22,14 @@ BACKEND_READ_COLUMNS = {
     "normalization_version",
     "canonicalization_version",
     "last_seen_at",
-    "last_seen_run_id",
     "current_raw_listing_id",
     "mileage",
 }
 
 INSERT_ONLY_COLUMNS = {
-    "marketplace_source_id",
     "source",
     "uuid",
     "first_seen_at",
-    "first_seen_run_id",
 }
 
 

@@ -12,7 +12,6 @@ import requests
 from conftest import load_fixture
 
 from src.fetch.algolia import DubizzleAdapter
-from src.models import Scope
 
 
 class _Resp:
@@ -78,52 +77,45 @@ def test_retries_transient_timeout_then_succeeds(config):
     hit = load_fixture("sample_hit.json")
     session = _ScriptedSession([requests.Timeout("boom"), _ok_page(hit)])
     adapter = DubizzleAdapter(config, session=session)
-    adapter.set_run_id("run-retry")
-    out = list(adapter.fetch(Scope("dubizzle", "used", "toyota")))
+    out = list(adapter.fetch(make="toyota", condition="used"))
     assert len(out) == 1
-    assert out[0][1].retried is True
-    assert adapter.retry_count >= 1
-    # Page 0 ultimately succeeded with one hit.
-    assert len(out[0][0]) == 1
+    assert adapter.retry_count == 1
+    assert adapter.failures == 0
 
 
 def test_retries_connection_error_then_succeeds(config):
     hit = load_fixture("sample_hit.json")
     session = _ScriptedSession([requests.ConnectionError("down"), _ok_page(hit)])
     adapter = DubizzleAdapter(config, session=session)
-    adapter.set_run_id("run-retry-conn")
-    out = list(adapter.fetch(Scope("dubizzle", "used", "toyota")))
-    assert out[0][1].retried is True
-    assert len(out[0][0]) == 1
+    out = list(adapter.fetch(make="toyota", condition="used"))
+    assert len(out) == 1
+    assert adapter.retry_count == 1
 
 
 def test_retries_rate_limit_429_then_succeeds(config):
     hit = load_fixture("sample_hit.json")
     session = _ScriptedSession([_Resp(None, status_code=429), _ok_page(hit)])
     adapter = DubizzleAdapter(config, session=session)
-    adapter.set_run_id("run-429")
-    out = list(adapter.fetch(Scope("dubizzle", "used", "toyota")))
-    assert out[0][1].retried is True
-    assert len(out[0][0]) == 1
+    out = list(adapter.fetch(make="toyota", condition="used"))
+    assert len(out) == 1
+    assert adapter.retry_count == 1
 
 
 def test_exhausted_retries_recorded_as_failure(config):
     session = _ScriptedSession([requests.Timeout("boom")] * 5)
     adapter = DubizzleAdapter(config, session=session)
-    adapter.set_run_id("run-dead")
-    out = list(adapter.fetch(Scope("dubizzle", "used", "toyota")))
-    # One page attempted, no listings, marked as failed.
-    assert len(out) == 1
-    assert out[0][0] == []
-    assert adapter.failures >= 1
-    assert adapter.retry_count >= 3
+    out = list(adapter.fetch(make="toyota", condition="used"))
+    # One page attempted, no listings yielded, failure recorded.
+    assert out == []
+    assert adapter.failures == 1
+    assert adapter.retry_count == 3  # RETRY_ATTEMPTS
 
 
 def test_non_transient_http_error_not_retried(config):
     # 404 is not in the transient set; adapter should stop immediately.
     session = _ScriptedSession([_Resp(None, status_code=404)])
     adapter = DubizzleAdapter(config, session=session)
-    adapter.set_run_id("run-404")
-    out = list(adapter.fetch(Scope("dubizzle", "used", "toyota")))
+    out = list(adapter.fetch(make="toyota", condition="used"))
+    assert out == []
     assert session.calls == 1  # no retry attempted
-    assert out[0][0] == []
+    assert adapter.retry_count == 0

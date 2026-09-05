@@ -22,7 +22,6 @@ def test_canonical_hash_excludes_volatile_metadata() -> None:
         model="Camry",
         price=10000,
         fetched_at=datetime(2026, 7, 4, tzinfo=timezone.utc),
-        lineage={"first_seen_run_id": 1, "last_seen_run_id": 1},
     )
     changed_metadata = Listing(
         uuid="listing-1",
@@ -32,7 +31,6 @@ def test_canonical_hash_excludes_volatile_metadata() -> None:
         model="Camry",
         price=10000,
         fetched_at=datetime(2026, 7, 5, tzinfo=timezone.utc),
-        lineage={"first_seen_run_id": 99, "last_seen_run_id": 100},
     )
 
     assert canonical_hash(listing) == canonical_hash(changed_metadata)

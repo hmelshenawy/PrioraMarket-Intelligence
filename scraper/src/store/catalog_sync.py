@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from src.models import CatalogSyncReport, VehicleReferenceCatalogRow
-from src.store.base import StorageAdapter
+from src.store import catalog_repo
 from src.store.catalog_csv import read_vehicle_reference_catalog_csv
 
 
@@ -28,9 +28,11 @@ def read_catalog_sources(
     return rows, errors, files
 
 
-def synchronize_vehicle_reference_catalog(storage: StorageAdapter, path: Path) -> CatalogSyncReport:
+def synchronize_vehicle_reference_catalog(conn, path: Path) -> CatalogSyncReport:
     rows, errors, files = read_catalog_sources(path)
-    report = storage.upsert_vehicle_reference_catalog(rows, ",".join(file.name for file in files))
+    report = catalog_repo.upsert_vehicle_reference_catalog(
+        conn, rows, ",".join(file.name for file in files)
+    )
     if errors:
         return CatalogSyncReport(
             source_file=report.source_file,

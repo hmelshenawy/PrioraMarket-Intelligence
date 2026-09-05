@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from src.models import VehicleReferenceCatalogRow
-from src.normalize.canonical import canonical_key
+from src.normalize import canonicalize
 
 
 class VehicleReferenceCatalogValidationError(ValueError):
@@ -26,9 +26,9 @@ def validate_vehicle_reference_catalog_row(
             "missing required catalog fields: " + ", ".join(missing)
         )
 
-    if row.make_key != canonical_key(row.make_key):
+    if row.make_key != canonicalize(row.make_key):
         raise VehicleReferenceCatalogValidationError("make_key must already be canonical")
-    if row.model_key != canonical_key(row.model_key):
+    if row.model_key != canonicalize(row.model_key):
         raise VehicleReferenceCatalogValidationError("model_key must already be canonical")
     if row.aliases is not None and not isinstance(row.aliases, dict):
         raise VehicleReferenceCatalogValidationError("aliases must be an object grouped by field")

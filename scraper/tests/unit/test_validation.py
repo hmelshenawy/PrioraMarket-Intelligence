@@ -1,15 +1,11 @@
-"""Unit test for the full validation gate (T028, US3).
-
-Covers: uuid presence, required fields, numeric values, basic
-consistency, and run-level UUID deduplication (newest occurrence wins).
-"""
+"""Unit tests for the validation gate functions."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 
 from src.models import Listing
-from src.validation import Validator
+from src.validation import dedup, validate
 
 
 def _listing(**overrides) -> Listing:
@@ -24,8 +20,8 @@ def _listing(**overrides) -> Listing:
         currency="AED",
         year=2021,
         kilometers=45000.0,
-        fuel_type="Petrol",
-        transmission="Automatic",
+        fuel_type="petrol",
+        transmission="automatic",
         seller_type="dealer",
         location="Dubai",
         photos_count=1,
@@ -38,53 +34,40 @@ def _listing(**overrides) -> Listing:
 
 
 def test_accepts_valid_listing():
-    v = Validator()
-    r = v.validate(_listing())
-    assert r.accepted is True
-    assert r.reason is None
+    assert validate(_listing()) is True
 
 
 def test_rejects_missing_uuid():
-    v = Validator()
-    r = v.validate(_listing(uuid=None))
-    assert r.accepted is False
-    assert "uuid" in r.missing_fields
+    assert validate(_listing(uuid=None)) is False
 
 
-def test_rejects_missing_required_fields():
-    v = Validator()
-    r = v.validate(_listing(make=None, price=None))
-    assert r.accepted is False
-    assert "make" in r.missing_fields
-    assert "price" in r.missing_fields
+def test_rejects_missing_make_or_price():
+    assert validate(_listing(make=None)) is False
+    assert validate(_listing(price=None)) is False
 
 
-def test_rejects_non_numeric_price():
-    v = Validator()
-    # price is typed float; a non-numeric surfaces as None from normalizer.
-    r = v.validate(_listing(price=None))
-    assert r.accepted is False
-    assert "price" in r.missing_fields
+def test_rejects_non_positive_price():
+    assert validate(_listing(price=0.0)) is False
 
 
 def test_rejects_inconsistent_year():
-    v = Validator()
     # Year far in the future fails basic consistency.
-    r = v.validate(_listing(year=2100))
-    assert r.accepted is False
-    assert r.reason is not None
-    assert "year" in (r.reason or "").lower() or "consistency" in (r.reason or "").lower()
+    assert validate(_listing(year=2100)) is False
+
+
+def test_rejects_insane_price_and_mileage():
+    assert validate(_listing(price=200_000_000.0)) is False
+    assert validate(_listing(kilometers=2_000_000.0)) is False
 
 
 def test_dedup_newest_occurrence_wins():
-    v = Validator()
     listings = [
         _listing(uuid="dup", price=100.0),
-        _listing(uuid="dup", price=200.0),  # newest
+        _listing(uuid="dup", price=200.0),
         _listing(uuid="dup", price=150.0),  # last occurrence is newest
         _listing(uuid="other", price=999.0),
     ]
-    deduped, dup_count = v.dedup(listings)
+    deduped, dup_count = dedup(listings)
     # Newest (last) occurrence of dup wins.
     assert len(deduped) == 2
     dup = next(item for item in deduped if item.uuid == "dup")
@@ -93,16 +76,6 @@ def test_dedup_newest_occurrence_wins():
 
 
 def test_dedup_no_duplicates():
-    v = Validator()
-    listings = [_listing(uuid="a"), _listing(uuid="b")]
-    deduped, dup_count = v.dedup(listings)
+    deduped, dup_count = dedup([_listing(uuid="a"), _listing(uuid="b")])
     assert len(deduped) == 2
     assert dup_count == 0
-
-
-def test_validator_is_stateless_across_runs():
-    v = Validator()
-    assert v.validate(_listing()).accepted
-    # A fresh validator has no carryover state.
-    v2 = Validator()
-    assert v2.validate(_listing()).accepted

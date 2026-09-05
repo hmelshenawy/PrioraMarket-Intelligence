@@ -4,7 +4,7 @@ import shutil
 from pathlib import Path
 
 from src.store.catalog_sync import synchronize_vehicle_reference_catalog
-from tests.fakes import InMemoryStorageAdapter
+from tests.integration.catalog_store_stub import CatalogStoreStub
 
 FIXTURE = (
     Path(__file__).parents[1]
@@ -17,7 +17,7 @@ FIXTURE = (
 def test_vehicle_reference_catalog_sync_is_idempotent(tmp_path) -> None:
     catalog = tmp_path / "vehicle_reference_catalog.csv"
     shutil.copy(FIXTURE, catalog)
-    storage = InMemoryStorageAdapter()
+    storage = CatalogStoreStub()
 
     first = synchronize_vehicle_reference_catalog(storage, catalog)
     second = synchronize_vehicle_reference_catalog(storage, catalog)

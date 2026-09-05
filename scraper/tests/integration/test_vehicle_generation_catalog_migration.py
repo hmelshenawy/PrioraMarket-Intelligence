@@ -8,15 +8,25 @@ import pytest
 
 from src.migrate import apply as apply_migrations
 from src.store.catalog_sync import synchronize_vehicle_reference_catalog
-from src.store.pool import DatabaseSettings, create_pool
-from src.store.postgres import PostgresStore
 
 
 def _import_vehicle_catalog(path, database_url):
     """Apply migrations, then sync a catalog CSV directory (ex-migrate sync-catalog)."""
     apply_migrations(database_url)
-    pool = create_pool(DatabaseSettings(database_url=database_url))
-    return synchronize_vehicle_reference_catalog(PostgresStore(pool), path)
+
+    import psycopg
+    from psycopg.rows import dict_row
+
+    conn = psycopg.connect(database_url, row_factory=dict_row)
+    try:
+        report = synchronize_vehicle_reference_catalog(conn, path)
+        conn.commit()
+        return report
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 pytestmark = pytest.mark.skipif(

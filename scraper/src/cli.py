@@ -1,7 +1,7 @@
 """PrioraMarket ingestion CLI.
 
 Commands:
-  run           fetch a scope from Algolia and store it (postgres or CSV)
+  run           fetch a scope from Algolia and save it to PostgreSQL
   backfill      re-canonicalize existing listing rows (no marketplace access)
   migrate       apply | status | rollback the schema migrations
   catalog-sync  synchronize the Vehicle Reference Catalog from CSV files
@@ -13,94 +13,98 @@ from __future__ import annotations
 
 import argparse
 import sys
-import uuid as uuid_lib
-from dataclasses import replace
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import psycopg
+from psycopg.rows import dict_row
+
+from src.backfill import CanonicalBackfillService
 from src.config import ConfigurationError, load_config
 from src.fetch.algolia import DubizzleAdapter
 from src.logging_setup import configure_logging, get_logger
-from src.models import Scope
-from src.pipeline import IngestionPipeline
-from src.report import format_summary_text
-from src.store.csv_store import CsvStorageAdapter
-
-
-def _build_run_id(scope: Scope) -> str:
-    short = uuid_lib.uuid4().hex[:8]
-    return f"run_{scope.marketplace}_{scope.condition}_{scope.make}_{short}"
-
-
-def _marketplace_source_code(scope: Scope) -> str:
-    if scope.marketplace == "dubizzle":
-        return "dubizzle_uae"
-    return scope.marketplace
-
-
-def _create_postgres_store(
-    config,
-    scope: Scope | None = None,
-    run_started_at: datetime | None = None,
-):
-    from src.store.pool import DatabaseSettings, create_pool
-    from src.store.postgres import PostgresStore
-
-    pool = create_pool(DatabaseSettings.from_config(config))
-    return PostgresStore(
-        pool,
-        scope=scope,
-        config_snapshot=config.snapshot() if scope else None,
-        run_started_at=run_started_at,
-        marketplace_source_code=_marketplace_source_code(scope) if scope else None,
-    )
-
-
-def run_ingestion(scope: Scope, env_path: Optional[str] = None, limit: int | None = None) -> int:
-    """Execute one scoped ingestion run. Returns listings extracted count."""
-    config = load_config(env_path)
-    run_id = _build_run_id(scope)
-    run_started_at = datetime.now(timezone.utc)
-    log = configure_logging(run_id, structured=config.enable_structured_logging)
-    log.info("ingestion run starting", extra={"scope": scope.__dict__, "run_id": run_id})
-
-    adapter = DubizzleAdapter(config)
-    if config.storage_backend == "csv":
-        storage, pipeline_config = CsvStorageAdapter(config.output_dir, run_id), config
-    elif config.storage_backend == "postgres":
-        # PostgresStore buffers via write_listings; keep CSV artifacts on too.
-        storage = _create_postgres_store(config, scope, run_started_at)
-        pipeline_config = replace(config, enable_csv_storage=True)
-    else:
-        raise ConfigurationError(f"Unsupported STORAGE_BACKEND: {config.storage_backend}")
-
-    pipeline = IngestionPipeline(pipeline_config, adapter, storage)
-    result = pipeline.run(scope, run_id, limit=limit)
-    print(format_summary_text(result.report))
-    return result.report.listings_extracted
+from src.normalize import normalize
+from src.store import catalog_repo
+from src.store.postgres import PostgresStore
+from src.validation import validate
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    scope = Scope(marketplace=args.marketplace, condition=args.condition, make=args.make)
-    return run_ingestion(scope, env_path=args.env, limit=args.limit)
+    config = load_config(args.env)
+    log = configure_logging(
+        f"run_{args.marketplace}_{args.condition}_{args.make}",
+        structured=config.enable_structured_logging,
+    )
+
+    adapter = DubizzleAdapter(config)
+
+    conn = psycopg.connect(config.database_url, row_factory=dict_row)
+    store = PostgresStore(conn)
+    catalog = _catalog_lookup(conn)
+
+    counts = {"fetched": 0, "valid": 0, "skipped": 0, "listings_created": 0, "listings_updated": 0}
+    try:
+        for raw in adapter.fetch(make=args.make, condition=args.condition):
+            counts["fetched"] += 1
+            try:
+                listing = normalize(raw, catalog)
+            except Exception:
+                counts["skipped"] += 1
+                log.exception("could not normalize listing %s", raw.uuid)
+                continue
+
+            if not validate(listing):
+                counts["skipped"] += 1
+                log.info("listing rejected", extra={"uuid": listing.uuid})
+                continue
+
+            counts["valid"] += 1
+            counts[f"listings_{store.save_listing(raw, listing)}"] += 1
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    log.info("ingestion run finished", extra=counts)
+    print(
+        f"Fetched: {counts['fetched']} | Valid: {counts['valid']} | Skipped: {counts['skipped']}"
+        f" | Created: {counts['listings_created']} | Updated: {counts['listings_updated']}"
+    )
+    return 0
+
+
+def _catalog_lookup(conn):
+    """Vehicle Reference Catalog lookup used by normalization."""
+
+    def lookup(make_key, model_key):
+        return catalog_repo.find_vehicle_reference_catalog(conn, "global", make_key, model_key)
+
+    return lookup
 
 
 def cmd_backfill(args: argparse.Namespace) -> int:
-    from src.backfill import CanonicalBackfillService
-
     config = load_config(args.env)
-    service = CanonicalBackfillService(
-        _create_postgres_store(config),
-        canonicalization_version=args.canonicalization_version,
-        market=args.market,
-        progress=print,
-    )
-    report = service.run(
-        dry_run=args.dry_run,
-        batch_size=args.batch_size,
-        resume_after_id=args.resume_after_id,
-    )
+    conn = psycopg.connect(config.database_url, row_factory=dict_row)
+    try:
+        service = CanonicalBackfillService(
+            conn,
+            canonicalization_version=args.canonicalization_version,
+            market=args.market,
+        )
+        report = service.run(
+            dry_run=args.dry_run,
+            batch_size=args.batch_size,
+            resume_after_id=args.resume_after_id,
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     print(
         "Canonical backfill summary: "
         f"dry_run={report.dry_run}, scanned={report.scanned}, changed={report.changed}, "
@@ -144,7 +148,6 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--marketplace", required=True)
     run_p.add_argument("--condition", required=True, choices=["used", "new"])
     run_p.add_argument("--make", required=True, help="make slug, e.g. toyota")
-    run_p.add_argument("--limit", type=int, help="max listing ingest")
     run_p.set_defaults(func=cmd_run)
 
     backfill_p = sub.add_parser(
