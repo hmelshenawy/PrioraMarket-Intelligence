@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from src.cli import build_parser, cmd_backfill, cmd_catalog_sync, cmd_migrate, cmd_run, main
@@ -45,6 +47,20 @@ def test_migrate_requires_database_url(monkeypatch):
     monkeypatch.setattr("src.cli.load_config", lambda env_path=None: _StubConfig(database_url=None))
     with pytest.raises(ConfigurationError):
         cmd_migrate(args)
+
+
+def test_catalog_sync_passes_a_path_object(monkeypatch):
+    received = {}
+
+    def _sync_catalog(database_url, path):
+        received["path"] = path
+
+    args = build_parser().parse_args(["catalog-sync", "--catalog-path", "ref/catalog"])
+    monkeypatch.setattr("src.cli.load_config", lambda env_path=None: _StubConfig(database_url="x"))
+    monkeypatch.setattr("src.migrate.sync_catalog", _sync_catalog)
+    assert cmd_catalog_sync(args) == 0
+    assert isinstance(received["path"], Path)
+    assert received["path"] == Path("ref/catalog")
 
 
 def test_main_returns_2_on_configuration_error(monkeypatch):

@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from typing import Iterable
 
 from src.hashing import canonical_hash, canonical_payload
+from src.logging_setup import get_logger
 from src.models import (
     CatalogSyncReport,
     Listing,
@@ -24,12 +25,15 @@ from src.models import (
     RunContext,
     RunReport,
     RunRow,
+    RunState,
     Scope,
     VehicleReferenceCatalogRow,
 )
 from src.run_naming import build_run_name, collision_disambiguator
 from src.store import backfill_repo, catalog_repo, listing_repo, run_repo
 from src.store.base import MarketplaceSourceNotFoundError
+
+logger = get_logger("prioramarket.store.postgres")
 
 
 class StorageSchemaError(Exception):
@@ -131,8 +135,15 @@ class PostgresStore:
         listing_by_key = {key: listing for listing in self._listings if (key := _pair_key(listing))}
         self.unmatched_raw_keys = sorted(set(raw_by_key) - set(listing_by_key))
         self.unmatched_listing_keys = sorted(set(listing_by_key) - set(raw_by_key))
-        for key in sorted(set(raw_by_key) & set(listing_by_key)):
-            self.persist_listing(ctx, raw_by_key[key], listing_by_key[key])
+        try:
+            for key in sorted(set(raw_by_key) & set(listing_by_key)):
+                self.persist_listing(ctx, raw_by_key[key], listing_by_key[key])
+        except Exception:
+            # Never leave the run stuck in RUNNING when persistence crashes.
+            run_repo.finalize_run(
+                self, ctx.run_id, report, RunState.FAILED.value, datetime.now(timezone.utc)
+            )
+            raise
         unmatched_count = len(self.unmatched_raw_keys) + len(self.unmatched_listing_keys)
         if unmatched_count:
             report.listings_skipped += unmatched_count
@@ -150,6 +161,7 @@ class PostgresStore:
     ) -> RunContext:
         try:
             source = run_repo.resolve_marketplace_source(self, marketplace_source_code)
+            logger.info("connecting to database")
         except MarketplaceSourceNotFoundError as exc:
             raise MarketplaceSourceRequiredError(
                 f"MarketplaceSource {marketplace_source_code!r} is not seeded"
@@ -224,6 +236,7 @@ class PostgresStore:
                 listing_repo.update_listing(self, existing.id or 0, row)
                 outcome = PersistOutcome(updated=True)
             self.commit_listing_unit()
+            print("outcome!!:", outcome)
             return outcome
         except Exception:
             self.rollback_listing_unit()

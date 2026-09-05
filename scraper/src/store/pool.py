@@ -42,7 +42,10 @@ def create_pool(settings: DatabaseSettings):
             settings.database_url,
             min_size=settings.pool_min,
             max_size=settings.pool_max,
-            kwargs={"connect_timeout": settings.connect_timeout},
+            kwargs={
+                "connect_timeout": settings.connect_timeout,
+                "prepare_threshold": None,
+            },
         )
     except Exception as exc:  # pragma: no cover - external service failure
         raise StorageConnectionError(f"Could not create PostgreSQL connection pool: {exc}") from exc

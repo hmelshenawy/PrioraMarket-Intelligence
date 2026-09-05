@@ -138,13 +138,13 @@ def test_vehicle_generation_catalog_migration_creates_expected_schema() -> None:
 
 def _write_catalog_csv(path, rows) -> None:
     fieldnames = [
-        "slug",
         "market",
         "make_key",
+        "make_display",
         "model_key",
+        "model_display",
         "generation",
         "body_code",
-        "marketing_name",
         "start_year",
         "end_year",
         "facelift_start_year",
@@ -153,87 +153,78 @@ def _write_catalog_csv(path, rows) -> None:
         "confidence",
     ]
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, quotechar="'")
         writer.writeheader()
         writer.writerows(rows)
 
 
-def _catalog_row(slug: str, market: str, start_year: str = "2014") -> dict[str, str]:
+def _catalog_row(market: str, start_year: str = "2014") -> dict[str, str]:
     return {
-        "slug": slug,
         "market": market,
         "make_key": "prioratest",
+        "make_display": "Prioratest",
         "model_key": "catalog",
+        "model_display": "Catalog",
         "generation": "T1",
         "body_code": "T1",
-        "marketing_name": "Catalog",
         "start_year": start_year,
         "end_year": "",
         "facelift_start_year": "",
         "facelift_end_year": "",
-        "aliases": '["Catalog", "T1"]',
-        "confidence": "test",
+        "aliases": '{"model": ["Catalog", "T1"]}',
+        "confidence": "manual",
     }
 
 
-def test_vehicle_catalog_import_upserts_and_allows_market_specific_duplicates(tmp_path) -> None:
+def test_vehicle_catalog_sync_upserts_and_allows_market_specific_duplicates(tmp_path) -> None:
     database_url = _safe_database_url(os.environ["DATABASE_URL"])
     apply_migrations(database_url)
 
     from psycopg import connect
 
-    slugs = [
-        "test-global-mercedes-benz-c-class-w205",
-        "test-uae-mercedes-benz-c-class-w205",
-    ]
     with connect(database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM vehicle_generation_catalog WHERE slug = ANY(%s)", (slugs,))
+            cur.execute("""
+                DELETE FROM vehicle_reference_catalog
+                WHERE make_key = 'prioratest' AND model_key = 'catalog'
+                """)
         conn.commit()
 
     _write_catalog_csv(
-        tmp_path / "mercedes-benz.csv",
+        tmp_path / "prioratest.csv",
         [
-            _catalog_row(slugs[0], "global", "2014"),
-            _catalog_row(slugs[1], "uae", "2015"),
+            _catalog_row("global", "2014"),
+            _catalog_row("uae", "2015"),
         ],
     )
     summary = _import_vehicle_catalog(tmp_path, database_url)
 
-    assert summary.files_read == 1
-    assert summary.rows_inserted == 2
-    assert summary.rows_updated == 0
-    assert summary.rows_skipped == 0
-    assert summary.errors == 0
+    assert (summary.inserted, summary.updated, summary.unchanged, summary.conflicts) == (2, 0, 0, 0)
 
     _write_catalog_csv(
-        tmp_path / "mercedes-benz.csv",
+        tmp_path / "prioratest.csv",
         [
-            _catalog_row(slugs[0], "global", "2016"),
-            _catalog_row(slugs[1], "uae", "2015"),
+            _catalog_row("global", "2016"),
+            _catalog_row("uae", "2015"),
         ],
     )
     summary = _import_vehicle_catalog(tmp_path, database_url)
 
-    assert summary.rows_inserted == 0
-    assert summary.rows_updated == 1
+    assert (summary.inserted, summary.updated, summary.unchanged) == (0, 1, 1)
 
     with connect(database_url) as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                SELECT slug, market, start_year
-                FROM vehicle_generation_catalog
-                WHERE slug = ANY(%s)
-                ORDER BY slug
-                """,
-                (slugs,),
-            )
+            cur.execute("""
+                SELECT market, start_year
+                FROM vehicle_reference_catalog
+                WHERE make_key = 'prioratest' AND model_key = 'catalog'
+                ORDER BY market
+                """)
             rows = cur.fetchall()
-            cur.execute("DELETE FROM vehicle_generation_catalog WHERE slug = ANY(%s)", (slugs,))
+            cur.execute("""
+                DELETE FROM vehicle_reference_catalog
+                WHERE make_key = 'prioratest' AND model_key = 'catalog'
+                """)
         conn.commit()
 
-    assert rows == [
-        ("test-global-mercedes-benz-c-class-w205", "global", 2016),
-        ("test-uae-mercedes-benz-c-class-w205", "uae", 2015),
-    ]
+    assert rows == [("global", 2016), ("uae", 2015)]

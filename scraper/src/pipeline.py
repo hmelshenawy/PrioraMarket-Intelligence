@@ -67,7 +67,12 @@ class IngestionPipeline:
         self._validator = validator or Validator()
         self._log = get_logger("pipeline")
 
-    def run(self, scope: Scope, run_id: str) -> PipelineResult:
+    def run(
+        self,
+        scope: Scope,
+        run_id: str,
+        limit: int | None = None,
+    ) -> PipelineResult:
         started = datetime.now(timezone.utc)
         t0 = time.monotonic()
         run = IngestionRun(

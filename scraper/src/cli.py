@@ -16,6 +16,7 @@ import sys
 import uuid as uuid_lib
 from dataclasses import replace
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Optional
 
 from src.config import ConfigurationError, load_config
@@ -56,7 +57,7 @@ def _create_postgres_store(
     )
 
 
-def run_ingestion(scope: Scope, env_path: Optional[str] = None) -> int:
+def run_ingestion(scope: Scope, env_path: Optional[str] = None, limit: int | None = None) -> int:
     """Execute one scoped ingestion run. Returns listings extracted count."""
     config = load_config(env_path)
     run_id = _build_run_id(scope)
@@ -75,14 +76,14 @@ def run_ingestion(scope: Scope, env_path: Optional[str] = None) -> int:
         raise ConfigurationError(f"Unsupported STORAGE_BACKEND: {config.storage_backend}")
 
     pipeline = IngestionPipeline(pipeline_config, adapter, storage)
-    result = pipeline.run(scope, run_id)
+    result = pipeline.run(scope, run_id, limit=limit)
     print(format_summary_text(result.report))
     return result.report.listings_extracted
 
 
 def cmd_run(args: argparse.Namespace) -> int:
     scope = Scope(marketplace=args.marketplace, condition=args.condition, make=args.make)
-    return run_ingestion(scope, env_path=args.env)
+    return run_ingestion(scope, env_path=args.env, limit=args.limit)
 
 
 def cmd_backfill(args: argparse.Namespace) -> int:
@@ -130,7 +131,7 @@ def cmd_catalog_sync(args: argparse.Namespace) -> int:
     config = load_config(args.env)
     if not config.database_url:
         raise ConfigurationError("DATABASE_URL is required for catalog sync")
-    sync_catalog(config.database_url, args.catalog_path)
+    sync_catalog(config.database_url, Path(args.catalog_path))
     return 0
 
 
@@ -143,6 +144,7 @@ def build_parser() -> argparse.ArgumentParser:
     run_p.add_argument("--marketplace", required=True)
     run_p.add_argument("--condition", required=True, choices=["used", "new"])
     run_p.add_argument("--make", required=True, help="make slug, e.g. toyota")
+    run_p.add_argument("--limit", type=int, help="max listing ingest")
     run_p.set_defaults(func=cmd_run)
 
     backfill_p = sub.add_parser(
