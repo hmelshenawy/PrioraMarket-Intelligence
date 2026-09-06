@@ -260,7 +260,7 @@ def extract(
         "photos_count": hit.get("photos_count", 0),
     }
 
-    return RawListing(
+    extracted =  RawListing(
         marketplace=marketplace,
         marketplace_listing_id=str(hit.get("id")) if hit.get("id") is not None else None,
         uuid=hit.get("uuid"),
@@ -271,3 +271,5 @@ def extract(
         condition=condition,
         make_slug=make_slug,
     )
+    print("extracted value!!", extracted.extracted_fields )
+    return extracted 

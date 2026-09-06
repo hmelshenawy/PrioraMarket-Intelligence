@@ -55,7 +55,7 @@ def cmd_run(args: argparse.Namespace) -> int:
 
             if not validate(listing):
                 counts["skipped"] += 1
-                log.info("listing rejected", extra={"uuid": listing.uuid})
+                log.info("Invalid listing skipped: %s", listing.uuid)
                 continue
 
             counts["valid"] += 1

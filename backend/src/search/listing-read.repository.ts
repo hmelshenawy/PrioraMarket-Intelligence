@@ -35,6 +35,7 @@ export class PrismaListingReadRepository implements ListingReadRepositoryInterfa
   }
 
   async findDetail(_query: BuiltListingDetailQuery): Promise<ListingDetailDomain | null> {
+    console.log("find listing read")
     const listing = (await this.prisma.listing.findFirst({
       where: _query.where,
       select: _query.select
@@ -43,9 +44,9 @@ export class PrismaListingReadRepository implements ListingReadRepositoryInterfa
     if (!listing) {
       return null;
     }
-
-    const [marketplace, latestSnapshot] = await Promise.all([
-      this.prisma.marketplaceSource.findUnique({ where: { id: listing.marketplaceSourceId } }),
+    console.log("find listing read2") //
+    const [ latestSnapshot] = await Promise.all([
+      
       this.prisma.listingSnapshot.findFirst({
         where: { listingId: this.toBigIntId(listing.id) },
         orderBy: { capturedAt: 'desc' },
@@ -53,7 +54,7 @@ export class PrismaListingReadRepository implements ListingReadRepositoryInterfa
       })
     ]);
 
-    return this.toListingDetailDomain(listing, marketplace as MarketplaceSourceRow | null, latestSnapshot as ListingSnapshotRow | null);
+    return this.toListingDetailDomain(listing,  null, latestSnapshot as ListingSnapshotRow | null);
   }
 
   async getFilterMetadata(query: BuiltFilterMetadataQuery): Promise<FilterMetadataDomain> {

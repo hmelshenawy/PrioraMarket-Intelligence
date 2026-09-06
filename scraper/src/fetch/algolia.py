@@ -44,6 +44,7 @@ class DubizzleAdapter:
         self._client = AlgoliaClient(config, session=session)
         self._log = get_logger("adapter")
         self.failures = 0
+        print("dubbizleAdaptor!! ",self._client)
 
     @property
     def retry_count(self) -> int:
@@ -74,25 +75,28 @@ class DubizzleAdapter:
                 if result.get("nbHits", 0) == 0:
                     return
 
-            for hit in result.get("hits", []) or []:
+            for hit in result.get("hits", []) or []: # loop inside the hit array to get each car alone
                 yield extract(
                     hit,
                     condition=condition,
                     scrape_run_id=scrape_run_id,
                     fetched_at=fetched_at,
                 )
-            page += 1
+            page += 1  # increase page number inside the while loop to get next page hits / cars
             self._rate_limit_sleep()
+            print("fetch!! ",self.__class__.__name__)
 
     def _build_params(self, *, filters: str, page: int) -> str:
-        return "&".join(
+        bo2loz =  "&".join(
             [
                 f"hitsPerPage={self._config.hits_per_page}",
                 f"page={page}",
                 f"filters={filters}",
                 f"attributesToRetrieve={ATTRIBUTES_TO_RETRIEVE}",
             ]
-        )
+        ) 
+        print("prams!! ", bo2loz)
+        return bo2loz
 
     def _rate_limit_sleep(self) -> None:
         lo = self._config.rate_limit_min_seconds

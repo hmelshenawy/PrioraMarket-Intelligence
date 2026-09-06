@@ -72,6 +72,7 @@ class AlgoliaClient:
                 results = r.json().get("results", [])
                 if not results:
                     return (None, retried)
+                print("___________________________________---------result!!", results[0]["page"])
                 return (results[0], retried)
             except (TransientFetchError, requests.Timeout, requests.ConnectionError) as exc:
                 retried = True

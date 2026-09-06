@@ -30,8 +30,12 @@ export class SearchService {
 
   async findDetail(id: string) {
     const query = this.queryBuilder.buildListingDetailQuery(id);
+    if(!query){
+      throw new NotFoundException("qoury notfound !!")
+    }
+    console.log(query)
     const detail = await this.listingReadRepository.findDetail(query);
-
+    console.log("details1!", detail)
     if (!detail) {
       throw new NotFoundException('Listing not found');
     }

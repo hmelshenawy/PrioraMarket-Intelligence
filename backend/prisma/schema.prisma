@@ -3,143 +3,71 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model MarketplaceSource {
-  id            BigInt         @id @default(autoincrement())
-  code          String         @unique
-  name          String
-  country       String
-  baseUrl       String         @map("base_url")
-  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime       @default(now()) @map("updated_at") @db.Timestamptz(6)
-  ingestion_run IngestionRun[]
-  listing       Listing[]
-  raw_listing   RawListing[]
-
-  @@map("marketplace_source")
-}
-
-model IngestionRun {
-  id                                               BigInt            @id @default(autoincrement())
-  name                                             String            @unique
-  marketplaceSourceId                              BigInt            @map("marketplace_source_id")
-  marketplace                                      String
-  condition                                        String
-  make                                             String
-  status                                           String
-  startedAt                                        DateTime          @map("started_at") @db.Timestamptz(6)
-  completedAt                                      DateTime?         @map("completed_at") @db.Timestamptz(6)
-  pagesScraped                                     Int               @default(0) @map("pages_scraped")
-  listingsExtracted                                Int               @default(0) @map("listings_extracted")
-  listingsSkipped                                  Int               @default(0) @map("listings_skipped")
-  failuresCount                                    Int               @default(0) @map("failures_count")
-  durationMs                                       Int?              @map("duration_ms")
-  configSnapshot                                   Json              @default("{}") @map("config_snapshot")
-  reportJson                                       Json?             @map("report_json")
-  createdAt                                        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  marketplace_source                               MarketplaceSource @relation(fields: [marketplaceSourceId], references: [id], onUpdate: NoAction)
-  listing_listing_first_seen_run_idToingestion_run Listing[]         @relation("listing_first_seen_run_idToingestion_run")
-  listing_listing_last_seen_run_idToingestion_run  Listing[]         @relation("listing_last_seen_run_idToingestion_run")
-  listing_snapshot                                 ListingSnapshot[]
-  raw_listing                                      RawListing[]
-
-  @@index([marketplaceSourceId], map: "idx_ingestion_run_marketplace_source_id")
-  @@index([marketplace, condition, make], map: "idx_ingestion_run_scope")
-  @@map("ingestion_run")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model RawListing {
-  id                        BigInt            @id @default(autoincrement())
-  marketplaceSourceId       BigInt            @map("marketplace_source_id")
-  ingestionRunId            BigInt            @map("ingestion_run_id")
+  id                        BigInt    @id @default(autoincrement())
   source                    String
   uuid                      String
-  rawPayload                Json              @map("raw_payload")
-  rawHash                   String            @map("raw_hash")
-  adapterVersion            String            @map("adapter_version")
-  marketplaceSchemaVersion  String?           @map("marketplace_schema_version")
-  marketplacePayloadVersion String?           @map("marketplace_payload_version")
-  extractedAt               DateTime          @map("extracted_at") @db.Timestamptz(6)
-  createdAt                 DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  rawPayload                Json      @map("raw_payload")
+  rawHash                   String    @map("raw_hash")
+  adapterVersion            String    @map("adapter_version")
+  marketplaceSchemaVersion  String?   @map("marketplace_schema_version")
+  marketplacePayloadVersion String?   @map("marketplace_payload_version")
+  extractedAt               DateTime  @map("extracted_at") @db.Timestamptz(6)
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   listing                   Listing[]
-  listing_snapshot          ListingSnapshot[]
-  ingestion_run             IngestionRun      @relation(fields: [ingestionRunId], references: [id], onUpdate: NoAction)
-  marketplace_source        MarketplaceSource @relation(fields: [marketplaceSourceId], references: [id], onUpdate: NoAction)
 
-  @@index([ingestionRunId], map: "idx_raw_listing_ingestion_run_id")
   @@index([rawHash], map: "idx_raw_listing_raw_hash")
   @@index([source, uuid], map: "idx_raw_listing_source_uuid")
   @@map("raw_listing")
 }
 
 model Listing {
-  id                                                     BigInt            @id @default(autoincrement())
-  marketplaceSourceId                                    BigInt            @map("marketplace_source_id")
-  source                                                 String
-  uuid                                                   String
-  title                                                  String?
-  make                                                   String?
-  model                                                  String?
-  trim                                                   String?
-  year                                                   Int?
-  price                                                  Decimal?          @db.Decimal(14, 2)
-  mileage                                                Int?
-  condition                                              String?
-  fuelType                                               String?           @map("fuel_type")
-  transmission                                           String?
-  bodyType                                               String?           @map("body_type")
-  regionalSpec                                           String?           @map("regional_spec")
-  specs                                                  String?
-  color                                                  String?
-  vehicleCondition                                       String?           @map("vehicle_condition")
-  location                                               String?
-  sellerType                                             String?           @map("seller_type")
-  url                                                    String?
-  status                                                 String            @default("ACTIVE")
-  firstSeenAt                                            DateTime          @map("first_seen_at") @db.Timestamptz(6)
-  lastSeenAt                                             DateTime          @map("last_seen_at") @db.Timestamptz(6)
-  firstSeenRunId                                         BigInt            @map("first_seen_run_id")
-  lastSeenRunId                                          BigInt            @map("last_seen_run_id")
-  currentRawListingId                                    BigInt?           @map("current_raw_listing_id")
-  canonicalHash                                          String            @map("canonical_hash")
-  normalizationVersion                                   String            @map("normalization_version")
-  canonicalizationVersion                                String?           @map("canonicalization_version")
-  createdAt                                              DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt                                              DateTime          @default(now()) @map("updated_at") @db.Timestamptz(6)
-  raw_listing                                            RawListing?       @relation(fields: [currentRawListingId], references: [id], onUpdate: NoAction)
-  ingestion_run_listing_first_seen_run_idToingestion_run IngestionRun      @relation("listing_first_seen_run_idToingestion_run", fields: [firstSeenRunId], references: [id], onUpdate: NoAction)
-  ingestion_run_listing_last_seen_run_idToingestion_run  IngestionRun      @relation("listing_last_seen_run_idToingestion_run", fields: [lastSeenRunId], references: [id], onUpdate: NoAction)
-  marketplace_source                                     MarketplaceSource @relation(fields: [marketplaceSourceId], references: [id], onUpdate: NoAction)
-  listing_snapshot                                       ListingSnapshot[]
-
+  id                      BigInt      @id @default(autoincrement())
+  source                  String
+  uuid                    String
+  title                   String?
+  make                    String?
+  model                   String?
+  trim                    String?
+  year                    Int?
+  price                   Decimal?    @db.Decimal(14, 2)
+  mileage                 Int?
+  condition               String?
+  location                String?
+  sellerType              String?     @map("seller_type")
+  url                     String?
+  status                  String      @default("ACTIVE")
+  firstSeenAt             DateTime    @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt              DateTime    @map("last_seen_at") @db.Timestamptz(6)
+  currentRawListingId     BigInt?     @map("current_raw_listing_id")
+  canonicalHash           String      @map("canonical_hash")
+  normalizationVersion    String      @map("normalization_version")
+  createdAt               DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime    @default(now()) @map("updated_at") @db.Timestamptz(6)
+  fuelType                String?     @map("fuel_type")
+  transmission            String?
+  bodyType                String?     @map("body_type")
+  regionalSpec            String?     @map("regional_spec")
+  specs                   String?
+  color                   String?
+  vehicleCondition        String?     @map("vehicle_condition")
+  canonicalizationVersion String?     @map("canonicalization_version")
+  raw_listing             RawListing? @relation(fields: [currentRawListingId], references: [id], onUpdate: NoAction)
+  marketplaceSourceId     BigInt?             @map("marketplace_source_id")
+  firstSeenRunId          BigInt?             @map("first_seen_run_id")
+  lastSeenRunId           BigInt?             @map("last_seen_run_id")
+  marketplaceSource       MarketplaceSource?  @relation(fields: [marketplaceSourceId], references: [id])
+  snapshots               ListingSnapshot[]
   @@unique([source, uuid])
   @@index([canonicalHash], map: "idx_listing_canonical_hash")
-  @@index([lastSeenRunId], map: "idx_listing_last_seen_run_id")
-  @@index([marketplaceSourceId], map: "idx_listing_marketplace_source_id")
+  @@index([make, model, trim, fuelType, transmission, bodyType, sellerType, condition], map: "idx_listing_canonical_categoricals")
+  @@index([make, model], map: "idx_listing_make_model")
   @@map("listing")
-}
-
-model ListingSnapshot {
-  id               BigInt       @id @default(autoincrement())
-  listingId        BigInt       @map("listing_id")
-  ingestionRunId   BigInt       @map("ingestion_run_id")
-  rawListingId     BigInt?      @map("raw_listing_id")
-  snapshotHash     String       @map("snapshot_hash")
-  canonicalPayload Json         @map("canonical_payload")
-  changedFields    Json         @default("[]") @map("changed_fields")
-  capturedAt       DateTime     @map("captured_at") @db.Timestamptz(6)
-  createdAt        DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
-  ingestion_run    IngestionRun @relation(fields: [ingestionRunId], references: [id], onUpdate: NoAction)
-  listing          Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  raw_listing      RawListing?  @relation(fields: [rawListingId], references: [id], onUpdate: NoAction)
-
-  @@index([ingestionRunId], map: "idx_listing_snapshot_ingestion_run_id")
-  @@index([listingId, capturedAt], map: "idx_listing_snapshot_listing_captured")
-  @@index([listingId], map: "idx_listing_snapshot_listing_id")
-  @@map("listing_snapshot")
 }
 
 model yoyo_log {
@@ -171,29 +99,30 @@ model yoyo_version {
 }
 
 model VehicleReferenceCatalog {
-  id                 BigInt    @id @default(autoincrement())
-  market             String    @default("global")
-  makeKey            String    @map("make_key")
-  makeDisplay        String    @map("make_display")
-  modelKey           String    @map("model_key")
-  modelDisplay       String    @map("model_display")
-  generation         String?
-  bodyCode           String?   @map("body_code")
-  startYear          Int?      @map("start_year")
-  endYear            Int?      @map("end_year")
-  faceliftStartYear  Int?      @map("facelift_start_year")
-  faceliftEndYear    Int?      @map("facelift_end_year")
-  aliases            Json      @default("{}")
-  confidence         String    @default("manual")
-  sourceFile         String?   @map("source_file")
-  sourceRowHash      String?   @map("source_row_hash")
-  lastSyncedAt       DateTime? @map("last_synced_at") @db.Timestamptz(6)
-  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt          DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  id                BigInt    @id @default(autoincrement())
+  market            String    @default("global")
+  makeKey           String    @map("make_key")
+  makeDisplay       String    @map("make_display")
+  modelKey          String    @map("model_key")
+  modelDisplay      String    @map("model_display")
+  generation        String?
+  bodyCode          String?   @map("body_code")
+  startYear         Int?      @map("start_year")
+  endYear           Int?      @map("end_year")
+  faceliftStartYear Int?      @map("facelift_start_year")
+  faceliftEndYear   Int?      @map("facelift_end_year")
+  aliases           Json      @default("{}")
+  confidence        String    @default("manual")
+  sourceFile        String?   @map("source_file")
+  sourceRowHash     String?   @map("source_row_hash")
+  lastSyncedAt      DateTime? @map("last_synced_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
 
   @@unique([market, makeKey, modelKey, generation, bodyCode], map: "uq_vehicle_reference_catalog_market_identity")
   @@index([market, makeKey, modelKey], map: "idx_vehicle_reference_catalog_market_make_model")
   @@index([market, makeKey, modelKey, startYear, endYear], map: "idx_vehicle_reference_catalog_market_make_model_years")
+  @@index([aliases], map: "idx_vehicle_reference_catalog_aliases_gin", type: Gin)
   @@map("vehicle_reference_catalog")
 }
 
@@ -201,4 +130,51 @@ model yoyo_lock {
   locked Int       @id @default(1)
   ctime  DateTime? @db.Timestamp(6)
   pid    Int
+}
+
+model vehicle_generation_catalog {
+  id                  BigInt   @id @default(autoincrement())
+  slug                String   @unique(map: "uq_vehicle_generation_catalog_slug")
+  make_key            String
+  model_key           String
+  generation          String
+  body_code           String?
+  marketing_name      String?
+  start_year          Int
+  end_year            Int?
+  facelift_start_year Int?
+  facelift_end_year   Int?
+  aliases             Json     @default("[]")
+  confidence          String   @default("manual")
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime @default(now()) @db.Timestamptz(6)
+  market              String   @default("global")
+
+  @@unique([market, make_key, model_key, generation, body_code], map: "uq_vehicle_generation_catalog_market_identity")
+  @@index([market, make_key, model_key], map: "idx_vehicle_generation_catalog_market_make_model")
+  @@index([market, make_key, model_key, start_year, end_year], map: "idx_vehicle_generation_catalog_market_make_model_years")
+}
+
+model MarketplaceSource {
+  id        BigInt    @id @default(autoincrement())
+  slug      String    @unique
+  name      String?
+  baseUrl   String?   @map("base_url")
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  listings  Listing[]
+
+  @@map("marketplace_source")
+}
+
+model ListingSnapshot {
+  id               BigInt   @id @default(autoincrement())
+  listingId        BigInt   @map("listing_id")
+  capturedAt       DateTime @map("captured_at") @db.Timestamptz(6)
+  canonicalPayload Json     @map("canonical_payload")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  listing          Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, capturedAt], map: "idx_listing_snapshot_listing_captured")
+  @@map("listing_snapshot")
 }

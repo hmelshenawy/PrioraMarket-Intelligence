@@ -17,6 +17,7 @@ class PostgresStore:
 
     def __init__(self, conn):
         self.conn = conn
+        print("postgreStore created!! ", self.__class__)
 
     def save_listing(self, raw: RawListing, listing: Listing) -> str:
         """Insert the verbatim raw payload, then insert or update the listing.
@@ -29,7 +30,8 @@ class PostgresStore:
         existing = listing_repo.find_by_source_uuid(self.conn, listing.marketplace, listing.uuid)
         if existing is None:
             listing_repo.insert_listing(self.conn, listing, raw_id=raw_id)
-            print("stored to db!!", raw)
+            print("stored to !!",raw.uuid )
             return "created"
         listing_repo.update_listing(self.conn, existing["id"], listing, raw_id=raw_id)
+        print("updated to !!",raw.uuid )
         return "updated"

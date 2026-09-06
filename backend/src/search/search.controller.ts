@@ -18,6 +18,7 @@ export class SearchController {
 
   @Get(':id')
   detail(@Param('id') id: string) {
+    console.log("prams!!", id)
     return this.searchService.findDetail(id);
   }
 }
