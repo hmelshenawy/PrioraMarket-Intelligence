@@ -1,236 +1,162 @@
 # PrioraMarket Intelligence
 
-> A Market Intelligence platform for the UAE used car market.
+**Market intelligence for the UAE used-car market — built on structured, canonical marketplace data.**
 
-PrioraMarket transforms thousands of marketplace listings into structured market intelligence, helping buyers, sellers, dealers, and analysts understand the automotive market through clean data and actionable analytics—not by browsing listings.
+PrioraMarket transforms vehicle listings into an analytics-oriented dataset, helping analysts, dealers, buyers, and sellers understand inventory, pricing, and market activity without treating the product as another listings marketplace.
 
----
+> **Core question:** Not just *“Which cars are for sale?”* but *“What is happening in the market?”*
 
-## Vision
+## Product capabilities
 
-Most automotive marketplaces answer:
+| Capability | Purpose |
+| --- | --- |
+| Market Snapshot Dashboard | View active inventory, median price, typical price range, inventory movement, and price-drop indicators |
+| Cascading vehicle filters | Explore market segments by make, model, trim, and year |
+| Vehicle Reference Catalog | Maintain canonical identifiers and readable vehicle display names |
+| Marketplace ingestion | Collect source listing data for downstream processing |
+| Replay and backfill | Reprocess historical data using versioned canonicalization logic |
+| Data freshness | Distinguish snapshot generation time from the latest underlying listing observation |
 
-> "What cars are for sale?"
+**Data quality matters:** A missing or unsupported history-based metric is not represented as zero. Snapshot responses distinguish supported, partial, unavailable, and unsupported metrics.
 
-PrioraMarket answers:
+## System architecture
 
-> "What is happening in the market?"
-
-The platform continuously ingests marketplace listings, normalizes vehicle data, builds a canonical vehicle catalog, and exposes analytics through a dashboard-first experience.
-
----
-
-## Current Features
-
-### Data Platform
-
-- Marketplace ingestion pipeline
-- Canonical vehicle normalization
-- Replayable data processing
-- Canonical backfill
-- Vehicle Reference Catalog
-- Versioned normalization engine
-
-### Market Analytics
-
-- Market Snapshot Dashboard
-- Active Listings
-- Median Price
-- Typical Price Range
-- Inventory Change
-- Price Drops
-- Cascading vehicle filters
-- Catalog-based display names
-
----
-
-## Architecture
-
-```
-Marketplace
-
-        │
-
-        ▼
-
-Python Scraper
-(Ingestion)
-
-        │
-
-        ▼
-
-Canonicalization Engine
-
-        │
-
-        ▼
-
-PostgreSQL
-
-        │
-
-        ▼
-
-NestJS Analytics API
-
-        │
-
-        ▼
-
-Next.js Dashboard
+```text
+    Automotive Marketplace Sources
+                  |
+                  v
+          Python Ingestion
+          (Requests / BS4)
+                  |
+                  v
+       Canonicalization Engine
+       + Vehicle Reference Catalog
+                  |
+                  v
+             PostgreSQL
+       raw listings + canonical data
+                  |
+                  v
+          NestJS Analytics API
+          (read-only analytics)
+                  |
+                  v
+           Next.js Dashboard
+         (React / TanStack Query)
 ```
 
----
+### Architecture boundaries
 
-## Tech Stack
+- **Python ingestion owns data quality:** scraping, canonicalization, catalog synchronization, replay, and backfill.
+- **PostgreSQL separates source and analytical representations:** raw listing payloads are preserved while canonical listing fields can be reprocessed.
+- **NestJS owns analytical queries and contracts:** the API consumes normalized data rather than implementing marketplace-specific normalization rules.
+- **Next.js owns presentation:** dashboard cards and filters render catalog-backed display names and explicit data support states.
 
-### Scraper
+These boundaries help keep normalization deterministic and reusable as more data sources or analytical features are added.
 
-- Python
-- PostgreSQL
-- BeautifulSoup
-- Requests
-- CSV Reference Catalog
+## Market Snapshot
 
-### Backend
+The dashboard is designed around five metrics:
 
-- NestJS
-- Prisma
-- PostgreSQL
-- TypeScript
+1. **Active Listings** — the current observed inventory for a selected scope.
+2. **Median Price** — the midpoint of usable listing prices.
+3. **Typical Price Range** — a representative pricing interval, with sample-size context.
+4. **Inventory Change** — recent new and removed listings, where lifecycle history supports the calculation.
+5. **Price Drops** — seller price reductions, where price history is available.
 
-### Frontend
+Users can narrow the analysis from the overall UAE market to a specific make, model, trim, and year. Dependent filters use canonical catalog values, while users see readable labels.
 
-- Next.js
-- React
-- TanStack Query
-- Tailwind CSS
+Snapshots carry a generation timestamp and data-freshness metadata so users can distinguish **when the analysis was generated** from **when the underlying listings were last observed**.
 
----
+## Technology stack
 
-## Project Structure
+| Layer | Technologies |
+| --- | --- |
+| Data ingestion | Python, Requests, BeautifulSoup |
+| Data processing | Versioned canonicalization, reference catalog, replay/backfill |
+| Storage | PostgreSQL |
+| Backend | NestJS, TypeScript, Prisma |
+| Frontend | Next.js, React, TanStack Query, Tailwind CSS |
+| Development approach | Specification-driven feature development |
 
-```
-scrapper/
-    Data ingestion
-    Canonicalization
-    Replay
-    Vehicle Reference Catalog
+## Repository structure
 
-backend/
-    Analytics API
-    Read-only services
-
-frontend/
-    Dashboard
-    Market analytics
+```text
+scrapper/    # Ingestion, canonicalization, replay, backfill, catalog
+backend/     # Analytics API and database access
+frontend/    # Market dashboard and vehicle filters
+specs/       # Feature specifications, design, and implementation plans
 ```
 
----
+## Engineering highlights
 
-## Design Principles
+### Canonical vehicle model
+Marketplace-specific naming variations are mapped to canonical make, model, and trim values. A Vehicle Reference Catalog provides display names and a consistent vocabulary across ingestion and analytics.
 
-- Dashboard-first experience
-- Read-only analytics backend
-- Clean Architecture
-- Domain-Driven Design
-- Canonical data model
-- No marketplace normalization outside the scraper
-- Vehicle Reference Catalog as the single source of truth
-- Incremental feature development using Specification-Driven Development
+### Replayable processing
+Versioned normalization and replay/backfill workflows allow historical listings to be reprocessed without overwriting the original raw source records.
 
----
+### Read-only analytical API
+The backend operates on the canonical dataset; it does not silently re-normalize vehicles or mutate marketplace source data.
 
-## Roadmap
+### Explicit analytical uncertainty
+Missing history, insufficient price samples, and unsupported metrics are represented explicitly. This prevents a dashboard from presenting misleading precision.
 
-### ✅ Completed
+### Scope-aware market analysis
+The same analytical model supports both broad market snapshots and narrowly filtered vehicle segments.
 
-- Data ingestion
-- Canonicalization
-- Vehicle Reference Catalog
-- Replay
-- Canonical Backfill
-- Market Snapshot Dashboard
+## Getting started
 
-### 🚧 Planned
+Configure each service's required environment variables and ensure PostgreSQL is available.
 
-- Market Trends
-- Vehicle Valuation
-- Benchmark Analytics
-- AI Market Insights
-
----
-
-## Development
-
-### Backend
+**Backend**
 
 ```bash
 cd backend
-
 npm install
-
 npm run start:dev
 ```
 
-### Frontend
+**Frontend**
 
 ```bash
 cd frontend
-
 npm install
-
 npm run dev
 ```
 
-### Scraper
+**Ingestion**
 
 ```bash
 cd scrapper
-
 python -m src.ingestion.runner scrape
 ```
 
----
+These commands assume the corresponding dependencies and database configuration are already in place. Consult the relevant service configuration and feature quickstarts before running ingestion against a live source.
 
 ## Testing
 
-Backend
-
 ```bash
+# Backend (from backend/)
 npm test
-```
 
-Frontend
-
-```bash
+# Frontend (from frontend/)
 npm test
-```
 
-Python
-
-```bash
+# Scraper (from scrapper/)
 pytest
 ```
 
----
+## Technical documentation
 
-## Philosophy
+The [Market Snapshot feature specification](specs/006-market-snapshot-dashboard/spec.md) describes the intended user experience, edge cases, and support-status behavior. The [data model](specs/006-market-snapshot-dashboard/data-model.md) details the analytical response contract, filtering hierarchy, and freshness semantics.
 
-PrioraMarket is **not an automotive marketplace**.
+## Roadmap
 
-It is a **Market Intelligence Platform** built to answer questions like:
+**Current project scope:** marketplace ingestion, canonical vehicle processing, reference catalog, replay/backfill workflows, and the Market Snapshot Dashboard.
 
-- Is inventory growing or shrinking?
-- What is the typical market price?
-- Which models are becoming more active?
-- How is the market changing over time?
-
-The focus is analytics first, listings second.
+**Future directions:** historical market trends, vehicle valuation, price benchmarks, and AI-assisted market insights. These are roadmap items, not claims of implemented AI functionality.
 
 ---
 
-## License
-
-MIT
+PrioraMarket is an **analytics platform, not an automotive classifieds marketplace**. Its purpose is to turn observed listing data into explainable market signals.
